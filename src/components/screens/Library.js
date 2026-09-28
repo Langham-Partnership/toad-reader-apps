@@ -1,9 +1,4 @@
-import {
-  useState,
-  useEffect,
-  useLayoutEffect,
-  useCallback,
-} from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import Constants from 'expo-constants';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { Platform, StyleSheet, View, Text, Alert } from 'react-native';
@@ -407,47 +402,44 @@ const Library = ({
     }
   }, []);
 
-  const handleNewLibrary = useCallback(
-    async ({ response, accountId }) => {
-      if (response.status != 200) {
-        // they need to login again
-        // TODO: I should probably look for other possibilities like 3XX or 5XX errors
-        updateAccount({
-          accountId,
-          accountInfo: {
-            needToLogInAgain: true,
-          },
-        });
-        return;
-      }
-
-      const {
-        books: newBooks,
-        hash,
-        noChange,
-        newBookId,
-      } = await response.json();
-
-      if (noChange) {
-        console.log(
-          `...done fetching books (accountId: ${accountId}) - no change.`,
-        );
-        return { noChange, newBookId };
-      }
-
-      addBooks({
-        books: newBooks,
+  const handleNewLibrary = useCallback(async ({ response, accountId }) => {
+    if (response.status != 200) {
+      // they need to login again
+      // TODO: I should probably look for other possibilities like 3XX or 5XX errors
+      updateAccount({
         accountId,
-        hash,
+        accountInfo: {
+          needToLogInAgain: true,
+        },
       });
-      reSort();
+      return;
+    }
 
-      console.log(`...done fetching books (accountId: ${accountId}).`);
+    const {
+      books: newBooks,
+      hash,
+      noChange,
+      newBookId,
+    } = await response.json();
 
-      return { newBookId };
-    },
-    [],
-  );
+    if (noChange) {
+      console.log(
+        `...done fetching books (accountId: ${accountId}) - no change.`,
+      );
+      return { noChange, newBookId };
+    }
+
+    addBooks({
+      books: newBooks,
+      accountId,
+      hash,
+    });
+    reSort();
+
+    console.log(`...done fetching books (accountId: ${accountId}).`);
+
+    return { newBookId };
+  }, []);
 
   const updateBooks = useCallback(
     async ({ accountId }) => {
