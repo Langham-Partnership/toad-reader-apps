@@ -27,7 +27,8 @@ import useInstanceValue from '../../hooks/useInstanceValue';
 import useNetwork from '../../hooks/useNetwork';
 import useHasNoAuth from '../../hooks/useHasNoAuth';
 import useWideMode from '../../hooks/useWideMode';
-import usePushToken from '../../hooks/usePushToken';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PUSH_TOKEN_KEY } from '../../hooks/usePushToken';
 import usePushNotifications from '../../hooks/usePushNotifications';
 import useLoggedInUser from '../../hooks/useLoggedInUser';
 import { setUser } from '../../utils/analytics';
@@ -694,7 +695,26 @@ const Library = ({
     }
   }, []);
 
-  const pushToken = usePushToken();
+  // READER-145: the push token as stored at the moment logout starts. The logout request sends it as x-push-token so
+  // the server can retire it for this user. It used to send the usePushToken hook's { pushToken, refreshToken } object,
+  // which never matched any token, and a copy read when this screen mounted would be 'none' or out of date in the
+  // session where the token was first obtained or changed.
+  const [logOutPushToken, setLogOutPushToken] = useState();
+  useEffect(() => {
+    if (!logOutAccountId || Platform.OS === 'web') {
+      setLogOutPushToken(undefined);
+      return undefined;
+    }
+    let cancelled = false;
+    AsyncStorage.getItem(PUSH_TOKEN_KEY)
+      .catch(() => null)
+      .then((token) => {
+        if (!cancelled) setLogOutPushToken(token || 'none');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [logOutAccountId]);
   const notifications = usePushNotifications();
 
   useEffect(() => {
@@ -831,6 +851,10 @@ const Library = ({
     return <CoverAndSpin />;
   }
 
+  if (logOutAccountId && logOutPushToken === undefined) {
+    return <CoverAndSpin />; // reading the push token for the logout request
+  }
+
   if (logOutAccountId) {
     // native logout
     return (
@@ -841,7 +865,7 @@ const Library = ({
             uri: `${getDataOrigin(idps[logOutAccountId.split(':')[0]])}/logout${logOutAccountId ? `` : `/callback`}?noredirect=1`,
             headers: {
               'x-cookie-override': (accounts[logOutAccountId] || {}).cookie,
-              'x-push-token': pushToken,
+              'x-push-token': logOutPushToken,
             },
           })}
           onLoad={logOutOnLoad}

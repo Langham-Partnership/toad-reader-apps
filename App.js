@@ -106,7 +106,7 @@ const App = () => {
   const [setInitialOpenTimeout] = useSetTimeout();
   const appState = useRef(`active`);
 
-  usePushNotificationsSetup();
+  usePushNotificationsSetup(store);
 
   const { isUpdateAvailable, isUpdatePending, isChecking, isDownloading } =
     useUpdates();

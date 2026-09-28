@@ -2,11 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { setUser } from '../../utils/analytics';
 import {
-  getDataOrigin,
-  getReqOptionsWithAdditions,
-  safeFetch,
-} from '../../utils/toolbox';
-import { PUSH_TOKEN_KEY } from '../../hooks/usePushToken';
+  PUSH_TOKEN_KEY,
+  PUSH_TOKEN_TO_RETIRE_KEY,
+} from '../../hooks/usePushToken';
+import { sendPushTokenToServer } from '../../utils/sendPushToken';
 
 const initialState = {};
 
@@ -36,18 +35,22 @@ export default function (state = initialState, action) {
       (async () => {
         const token = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
         if (token) {
-          const path = `${getDataOrigin(action.idp)}/addpushtoken`;
-          await safeFetch(
-            path,
-            getReqOptionsWithAdditions({
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-cookie-override': action.accountInfo.cookie,
-              },
-              body: JSON.stringify({ token }),
-            }),
+          // READER-145: also hand over a token still waiting to be retired, for a device that changed token while
+          // no account was logged in. It is forgotten only once the server has accepted it.
+          const tokenToRetire = await AsyncStorage.getItem(
+            PUSH_TOKEN_TO_RETIRE_KEY,
           );
+          const previousToken =
+            tokenToRetire && tokenToRetire !== token ? tokenToRetire : null;
+          const accepted = await sendPushTokenToServer({
+            idp: action.idp,
+            cookie: action.accountInfo.cookie,
+            token,
+            previousToken,
+          });
+          if (accepted && tokenToRetire) {
+            await AsyncStorage.removeItem(PUSH_TOKEN_TO_RETIRE_KEY);
+          }
         }
       })();
 
