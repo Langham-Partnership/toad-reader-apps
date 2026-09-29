@@ -10,6 +10,11 @@ import usePushToken, {
   PUSH_TOKEN_TO_RETIRE_KEY,
 } from './usePushToken';
 import { sendPushTokenToAllAccounts } from '../utils/sendPushToken';
+import {
+  canForgetPendingToken,
+  pendingTokenAfterChange,
+  previousTokenToSend,
+} from '../utils/pushTokenAccounts';
 
 // READER-145. The Expo push token is requested on EVERY launch, with the Expo project the build carries, and registered
 // with the server for every logged-in account on every launch. It used to be requested once and cached for ever, so a
@@ -66,9 +71,11 @@ const usePushNotificationsSetup = (store) => {
         if (!token) return;
 
         if (token !== pushToken) {
-          if (pushToken !== 'none') {
-            // Remember the old token until the server has retired it
-            await AsyncStorage.setItem(PUSH_TOKEN_TO_RETIRE_KEY, pushToken);
+          // Remember the old token until the server has retired it, without overwriting one still waiting
+          const pending = await AsyncStorage.getItem(PUSH_TOKEN_TO_RETIRE_KEY);
+          const nextPending = pendingTokenAfterChange(pending, pushToken);
+          if (nextPending && nextPending !== pending) {
+            await AsyncStorage.setItem(PUSH_TOKEN_TO_RETIRE_KEY, nextPending);
           }
           await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
           await refreshToken(); // Update UI immediately
@@ -80,15 +87,15 @@ const usePushNotificationsSetup = (store) => {
           const tokenToRetire = await AsyncStorage.getItem(
             PUSH_TOKEN_TO_RETIRE_KEY,
           );
+          const previousToken = previousTokenToSend(tokenToRetire, token);
           const { tried, accepted } = await sendPushTokenToAllAccounts({
             store,
             token,
-            previousToken:
-              tokenToRetire && tokenToRetire !== token ? tokenToRetire : null,
+            previousToken,
           });
-          // Forget the old token only once a server has actually retired it. With no logged-in account, keep it: the
-          // next login sends it (ADD_ACCOUNT).
-          if (tokenToRetire && tried > 0 && accepted === tried) {
+          // Forget the old token only once it was sent and every server accepted it. With no logged-in account, keep
+          // it: the next login sends it (ADD_ACCOUNT).
+          if (canForgetPendingToken({ previousToken, tried, accepted })) {
             await AsyncStorage.removeItem(PUSH_TOKEN_TO_RETIRE_KEY);
           }
         }

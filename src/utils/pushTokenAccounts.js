@@ -32,3 +32,20 @@ export const getAccountsToNotify = (accounts = {}, idps = {}, coreIdps = {}) =>
         idp && userId > 0 && !!cookie && !accountInfo.needToLogInAgain,
     )
     .map(({ accountId, idp, cookie }) => ({ accountId, idp, cookie }));
+
+// READER-145 review (Joel Cross on #2). The slot for "the old token the server still has to retire" holds one token.
+//
+// When the device's token changes, the slot keeps the token it already holds rather than being overwritten: that is
+// the oldest token not yet retired, the one a server may still have. A later token that never reached a server has
+// nothing to retire.
+export const pendingTokenAfterChange = (pending, oldToken) =>
+  pending || (oldToken && oldToken !== 'none' ? oldToken : null);
+
+// The previousToken to send along with token: the pending one, unless it is the token itself.
+export const previousTokenToSend = (pending, token) =>
+  pending && pending !== token ? pending : null;
+
+// The pending token may be forgotten only once it was actually sent as previousToken and every server tried accepted
+// it. Sending the current token alone (previousToken null) says nothing about the old one, so it must stay.
+export const canForgetPendingToken = ({ previousToken, tried, accepted }) =>
+  !!previousToken && tried > 0 && accepted === tried;

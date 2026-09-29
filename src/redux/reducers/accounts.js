@@ -6,6 +6,10 @@ import {
   PUSH_TOKEN_TO_RETIRE_KEY,
 } from '../../hooks/usePushToken';
 import { sendPushTokenToServer } from '../../utils/sendPushToken';
+import {
+  canForgetPendingToken,
+  previousTokenToSend,
+} from '../../utils/pushTokenAccounts';
 
 const initialState = {};
 
@@ -40,15 +44,20 @@ export default function (state = initialState, action) {
           const tokenToRetire = await AsyncStorage.getItem(
             PUSH_TOKEN_TO_RETIRE_KEY,
           );
-          const previousToken =
-            tokenToRetire && tokenToRetire !== token ? tokenToRetire : null;
+          const previousToken = previousTokenToSend(tokenToRetire, token);
           const accepted = await sendPushTokenToServer({
             idp: action.idp,
             cookie: action.accountInfo.cookie,
             token,
             previousToken,
           });
-          if (accepted && tokenToRetire) {
+          if (
+            canForgetPendingToken({
+              previousToken,
+              tried: 1,
+              accepted: accepted ? 1 : 0,
+            })
+          ) {
             await AsyncStorage.removeItem(PUSH_TOKEN_TO_RETIRE_KEY);
           }
         }
