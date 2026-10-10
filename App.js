@@ -46,11 +46,13 @@ const {
   LANGUAGE_CODE = 'en',
   IDPS,
   SENTRY_DSN,
+  SENTRY_ENVIRONMENT = 'production',
 } = Constants.expoConfig?.extra || {};
 
 if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
+    environment: SENTRY_ENVIRONMENT,
     enabled: !__DEV__,
     release: `${Constants.expoConfig?.version || 'unknown'}-${Updates.updateId || 'unknown'}`,
     debug: true,
