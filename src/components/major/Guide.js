@@ -15,7 +15,7 @@ const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 15,
     backgroundColor: 'transparent',
   },
@@ -78,7 +78,7 @@ const Guide = ({
     >
       <View
         style={{
-          ...StyleSheet.absoluteFillObject,
+          ...StyleSheet.absoluteFill,
           top: safeAreaInsets.top + getStatusBarCurrentHeight(),
           bottom: safeAreaInsets.bottom,
         }}

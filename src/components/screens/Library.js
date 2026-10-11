@@ -47,7 +47,7 @@ import Reports from './Reports';
 import DeleteMyAccount from './DeleteMyAccount';
 import Users from './Users';
 import ErrorMessage from './ErrorMessage';
-import SideMenu from 'react-native-simple-side-menu';
+import SideMenu from '../basic/SideMenu';
 import AppMenu from '../major/AppMenu';
 import MenuErrorBoundary from '../basic/MenuErrorBoundary';
 import LibraryHeader from '../major/LibraryHeader';

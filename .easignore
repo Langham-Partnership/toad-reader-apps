@@ -1,6 +1,8 @@
-/.expo/*
+/.expo/
+/android
 /coverage/*
 /dist/*
+/ios
 /node_modules/*
 /web-build/*
 

@@ -18,7 +18,7 @@ import HeaderIcon from '../basic/HeaderIcon';
 import SaveStateHeaderIcon from '../basic/SaveStateHeaderIcon';
 
 const container = {
-  ...StyleSheet.absoluteFillObject,
+  ...StyleSheet.absoluteFill,
   backgroundColor: 'white',
   zIndex: 5,
 };

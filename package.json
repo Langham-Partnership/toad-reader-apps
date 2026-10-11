@@ -20,6 +20,7 @@
     "ci:build": "npm run change-tenant dummy && npx expo prebuild --clean",
     "ci:lint": "npm run lint",
     "ci:test": "npm run test:ci",
+    "ci:web": "npm run change-tenant dummy && npx expo export --clear --platform web --output-dir dist && node ./scripts/checkWebBoot.js dist",
     "confirm": "read -p 'Are you sure? (y/N) ' -n 1 -r && echo '\n' && [[ $REPLY =~ ^[Yy]$ ]]",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -129,7 +130,6 @@
     "react-native-flip-editor": "github:biblemesh/react-native-flip-editor#7bb67786ef504ca5694b757f915b0e883e6d7f26",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-safe-area-context": "5.4.0",
-    "react-native-simple-side-menu": "github:biblemesh/react-native-simple-side-menu#23df42cad42ccfb276d29140d853864ed1af57a3",
     "react-native-svg": "15.11.2",
     "react-native-table-component": "github:biblemesh/react-native-table-component#e32dc60c6b9ba7c9225616fdbd753d7156302246",
     "react-native-view-shot": "~4.0.3",
@@ -176,6 +176,6 @@
     "typescript-eslint": "^8.38.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19.4"
   }
 }

@@ -1,6 +1,6 @@
 services:
   ereader-frontend:
-    image: node:${NODE_VERSION:-20}-alpine
+    image: node:${NODE_VERSION:-22}-alpine
     command: ['npm', 'start']
     ports:
       - '19006:19006'

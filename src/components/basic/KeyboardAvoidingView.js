@@ -14,7 +14,7 @@ import { getStatusBarCurrentHeight } from '../../utils/toolbox';
 
 const styles = StyleSheet.create({
   view: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
 });
 

@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, .1)',
   },
   trialContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
   },
   trial: {

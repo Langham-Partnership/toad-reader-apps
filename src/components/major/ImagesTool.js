@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   fullscreenContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'black',
   },
   imageContainer: {
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, .05)',
   },
   image: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   close: {
     position: 'absolute',

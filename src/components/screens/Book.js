@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     ...contentsStyles,
   },
   panels: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     flexDirection: 'row',
     alignItems: 'stretch',
   },
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     left: 0,
   },
   movingToolCover: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'transparent',
   },
   toolSpotMarker: {

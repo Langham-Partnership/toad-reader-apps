@@ -3,7 +3,7 @@ import { ScrollView, View, StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
   scrollCover: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
 });
 

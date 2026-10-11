@@ -28,11 +28,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   modal: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'black',
   },
   codeScanner: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   backToTextCodeButton: {
     position: 'absolute',

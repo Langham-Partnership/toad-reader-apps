@@ -16,14 +16,14 @@ const searchContainer = {
 
 const styles = StyleSheet.create({
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, .5)',
     zIndex: 10,
     alignItems: 'center',
   },
   searchContainer: {
     ...searchContainer,
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   searchContainerWideMode: {
     ...searchContainer,

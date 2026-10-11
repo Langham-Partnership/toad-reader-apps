@@ -12,6 +12,9 @@ const {
   FIRST_LOAD_SPLASH_TEXT_COLOR = 'black',
 } = Constants.expoConfig.extra;
 
+const { resizeMode = 'contain', backgroundColor = '#ffffff' } =
+  Constants.expoConfig.splash || {};
+
 const loadingLine = {
   position: 'absolute',
   width: '100%',
@@ -42,8 +45,8 @@ const styles = StyleSheet.create({
     left: 0,
     bottom: 0,
     right: 0,
-    resizeMode: Constants.expoConfig.splash.resizeMode,
-    backgroundColor: Constants.expoConfig.splash.backgroundColor,
+    resizeMode,
+    backgroundColor,
   },
   loadingLine1: {
     ...loadingLine,

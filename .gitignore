@@ -1,8 +1,10 @@
-/.expo/*
+/.expo/
 /.devcontainer/staging/.env
+/android
 /assets
 /coverage/*
 /dist/*
+/ios
 /node_modules/*
 /src/utils/translations/current.json
 /tenants/*

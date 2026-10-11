@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   webview: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
 });
 

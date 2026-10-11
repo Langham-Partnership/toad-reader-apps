@@ -44,7 +44,7 @@ const { DEV_USE_DEVELOPMENT_BACKEND } = Constants.expoConfig.extra;
 
 const styles = StyleSheet.create({
   content: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     top: 56,
     maxHeight: 750,
     justifyContent: 'space-between',

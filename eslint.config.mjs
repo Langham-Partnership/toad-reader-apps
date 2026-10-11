@@ -6,6 +6,9 @@ import prettierConfig from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config([
+  {
+    ignores: ['web-build/', 'dist/', 'android/', 'ios/'], // Generated folders
+  },
   pluginJs.configs.recommended, // Apply recommended ESLint rules
   tseslint.configs.recommended, // Apply recommended TypeScript rules
   prettierConfig, // Disable rules that conflict with Prettier

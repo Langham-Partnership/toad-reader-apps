@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   webViewContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   webView: {
     width: '100%',

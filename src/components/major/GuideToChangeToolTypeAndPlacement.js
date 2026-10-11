@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   clearCover: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   toolContainer: {
     position: 'absolute',

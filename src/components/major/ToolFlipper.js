@@ -17,7 +17,7 @@ import ToolFlipperButton from '../basic/ToolFlipperButton';
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'white',
     zIndex: 5,
   },

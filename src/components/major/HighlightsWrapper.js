@@ -13,7 +13,7 @@ import Highlights from './Highlights';
 import HeaderIcon from '../basic/HeaderIcon';
 
 const container = {
-  ...StyleSheet.absoluteFillObject,
+  ...StyleSheet.absoluteFill,
   backgroundColor: 'white',
   zIndex: 7,
 };

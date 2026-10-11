@@ -17,7 +17,7 @@ const styles = StyleSheet.create({
     paddingBottom: '56.25%',
   },
   webViewContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'black',
   },
   webView: {
