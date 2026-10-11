@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
-import { Audio } from 'expo-av';
+import { Audio, mediaAvailable } from '../../utils/media';
 import useUpdateEffect from 'react-use/lib/useUpdateEffect';
 import { i18n } from 'inline-i18n';
 
@@ -15,6 +15,7 @@ import { getReqOptionsWithAdditions } from '../../utils/toolbox';
 import AudiobookPlayerChapterLine from './AudiobookPlayerChapterLine';
 import AudiobookPlayerProgressBar from './AudiobookPlayerProgressBar';
 import AudiobookPlayerButtonRow from './AudiobookPlayerButtonRow';
+import MediaUnavailable from '../basic/MediaUnavailable';
 
 const { DEV_USE_DEVELOPMENT_BACKEND } = Constants.expoConfig.extra;
 
@@ -307,6 +308,8 @@ const AudiobookPlayer = ({
     },
     [durationMS],
   );
+
+  if (!mediaAvailable) return <MediaUnavailable />;
 
   return (
     <View

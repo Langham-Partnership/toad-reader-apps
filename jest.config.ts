@@ -1,7 +1,4 @@
 import type { Config } from 'jest';
-import { createDefaultPreset } from 'ts-jest';
-
-const tsJestTransformCfg = createDefaultPreset().transform;
 
 const config: Config = {
   preset: 'jest-expo',
@@ -9,7 +6,10 @@ const config: Config = {
   modulePathIgnorePatterns: ['crons'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   transform: {
-    ...tsJestTransformCfg,
+    // ts-jest type-checks, so it only gets this project's own TypeScript.
+    // Expo packages ship TypeScript source in node_modules, which must fall
+    // through to the Babel transform of the jest-expo preset.
+    '^(?!.*/node_modules/).+\\.tsx?$': 'ts-jest',
     '^.+\\.jsx?$': 'babel-jest',
   },
 };

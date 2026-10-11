@@ -23,6 +23,7 @@ import {
   openURL,
 } from '../../utils/toolbox';
 import { removeSnapshotsIfANewUpdateRequiresIt } from '../../utils/removeEpub';
+import { mediaAvailable } from '../../utils/media';
 import useInstanceValue from '../../hooks/useInstanceValue';
 import useNetwork from '../../hooks/useNetwork';
 import useHasNoAuth from '../../hooks/useHasNoAuth';
@@ -261,7 +262,8 @@ const Library = ({
   const accountIds = Object.keys(accounts).join(',');
   const previousAccountIds = usePrevious(accountIds);
 
-  const { useAudiobooks } = Object.values(idps)[0] || {};
+  const useAudiobooks =
+    mediaAvailable && (Object.values(idps)[0] || {}).useAudiobooks;
 
   useEffect(() => {
     // If it is a direct load to something other than the Library, then add

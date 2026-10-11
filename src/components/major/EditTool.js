@@ -140,9 +140,10 @@ const EditTool = React.memo(
       [goUpdateTool, toolTypes],
     );
 
-    const selectedOption = toolTypes.filter(
-      ({ toolType }) => toolType === tool.toolType,
-    )[0];
+    // an existing tool keeps its type, also when that type is no longer offered
+    const selectedOption =
+      toolTypes.filter(({ toolType }) => toolType === tool.toolType)[0] ||
+      toolInfoByType[tool.toolType];
 
     return (
       <>

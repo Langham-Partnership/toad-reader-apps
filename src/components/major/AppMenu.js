@@ -19,6 +19,7 @@ import * as Updates from 'expo-updates';
 
 import { getIdsFromAccountId, openURL } from '../../utils/toolbox';
 import { logEvent } from '../../utils/analytics';
+import { mediaAvailable } from '../../utils/media';
 import useNetwork from '../../hooks/useNetwork';
 import useRouterState from '../../hooks/useRouterState';
 import BackFunction from '../basic/BackFunction';
@@ -497,7 +498,7 @@ const AppMenu = ({
             disabled: !online,
           },
         ]),
-    ...(!(isAdmin && Platform.OS === 'web' && useAudiobooks)
+    ...(!(isAdmin && Platform.OS === 'web' && useAudiobooks && mediaAvailable)
       ? []
       : [
           {

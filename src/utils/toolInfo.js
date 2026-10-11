@@ -1,5 +1,6 @@
 import { i18n } from 'inline-i18n';
 import { nonEmpty, validUrl, validLTIUrl } from './toolbox';
+import { mediaAvailable } from './media';
 import { youtubeRegex, shortYoutubeRegex } from '../components/major/VideoTool';
 
 const hasErrorWithMessageForTime = (time) =>
@@ -164,7 +165,9 @@ export const getToolInfo = () => {
         {
           name: 'videoLink',
           type: 'string',
-          label: i18n('YouTube, Vimeo, MP4 or WebM link', '', 'enhanced'),
+          label: mediaAvailable
+            ? i18n('YouTube, Vimeo, MP4 or WebM link', '', 'enhanced')
+            : i18n('YouTube or Vimeo link', '', 'enhanced'),
           placeholder: i18n('Eg. {{example}}', '', 'enhanced', {
             example: 'https://www.youtube.com/watch?v=Y80wHFoYrrQ',
           }),
@@ -401,7 +404,10 @@ export const getToolInfo = () => {
   });
 
   return {
-    toolTypes,
+    // an audio tool cannot be chosen while there is nothing to play it with
+    toolTypes: toolTypes.filter(
+      ({ toolType }) => mediaAvailable || toolType !== 'AUDIO',
+    ),
     toolInfoByType,
   };
 };

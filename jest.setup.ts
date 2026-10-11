@@ -22,7 +22,7 @@ jest.mock('expo-constants', () => ({
   },
 }));
 
-jest.mock('expo-file-system', () => ({
+jest.mock('expo-file-system/legacy', () => ({
   documentDirectory: 'file://test/',
 }));
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform, StatusBar, Text } from 'react-native';
 import * as Linking from 'expo-linking';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 import { i18n, getLocale } from 'inline-i18n';
 import * as Updates from 'expo-updates';

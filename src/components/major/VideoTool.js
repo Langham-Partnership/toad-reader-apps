@@ -2,7 +2,7 @@ import React, { useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, Dimensions, Platform } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { getLocale } from 'inline-i18n';
-import { Video, ResizeMode, VideoFullscreenUpdate } from 'expo-av';
+import { Video, ResizeMode, VideoFullscreenUpdate } from '../../utils/media';
 
 import useWideMode from '../../hooks/useWideMode';
 

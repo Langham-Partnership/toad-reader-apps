@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { i18n } from 'inline-i18n';
-import { Audio } from 'expo-av';
+import { Audio, mediaAvailable } from '../../utils/media';
 
 import useRefState from '../../hooks/useRefState';
 
 import CoverAndSpin from '../basic/CoverAndSpin';
 import Icon from '../basic/Icon';
 import Button from '../basic/Button';
+import MediaUnavailable from '../basic/MediaUnavailable';
 
 const button = {
   borderRadius: 35,
@@ -228,6 +229,8 @@ const AudioPlayer = ({ source, logUsageEvent }) => {
     () => <Icon name="pause" style={[styles.bigIcon]} />,
     [],
   );
+
+  if (!mediaAvailable) return <MediaUnavailable />;
 
   return (
     <View style={styles.container}>

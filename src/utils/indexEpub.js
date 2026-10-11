@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { Text, Platform } from 'react-native';
 import MiniSearch from 'minisearch';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 import {
   getDataOrigin,

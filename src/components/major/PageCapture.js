@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Platform, View } from 'react-native';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 import {
   getDisplaySettingsObj,

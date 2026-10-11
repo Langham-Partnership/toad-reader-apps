@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { sentry, getBooksDir } from './toolbox';
 import { i18n } from 'inline-i18n';
 import { parseString } from 'xml2js';

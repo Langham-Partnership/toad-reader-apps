@@ -5,7 +5,7 @@ import { i18n } from 'inline-i18n';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import useToggle from 'react-use/lib/useToggle';
-import { Audio } from 'expo-av';
+import { Audio, mediaAvailable } from '../../utils/media';
 
 import {
   getDataOrigin,
@@ -26,6 +26,7 @@ import Dialog from './Dialog';
 import Button from '../basic/Button';
 import Icon from '../basic/Icon';
 import Input from '../basic/Input';
+import MediaUnavailable from '../basic/MediaUnavailable';
 import FileImporter from './FileImporter';
 import BookCoverEditor from './BookCoverEditor';
 
@@ -437,6 +438,8 @@ const AudiobookDialog = ({
                   {i18n('Chapters', '', 'admin')}
                 </Text>
 
+                {!mediaAvailable && <MediaUnavailable />}
+
                 {spines.map(
                   ({ filename, label, fileSizeInMB, durationMS }, idx) => {
                     const upDisabled = idx === 0 || submitting;
@@ -520,7 +523,9 @@ const AudiobookDialog = ({
                                 : PlayIcon
                             }
                             onPress={() => togglePlay(filename)}
-                            disabled={!bookCookies || submitting}
+                            disabled={
+                              !mediaAvailable || !bookCookies || submitting
+                            }
                           />
                           <Text style={styles.duration}>
                             {getTimeStringFromMS(durationMS)}
