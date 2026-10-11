@@ -7,7 +7,7 @@
         "channel": "beta"
       },
       "ios": {
-        "image": "sdk-54",
+        "image": "sdk-57",
         "resourceClass": "m-medium"
       }
     },
@@ -20,7 +20,7 @@
         "channel": "development"
       },
       "ios": {
-        "image": "sdk-54",
+        "image": "sdk-57",
         "resourceClass": "m-medium",
         "simulator": true
       }
@@ -35,7 +35,7 @@
       },
       "ios": {
         "autoIncrement": "buildNumber",
-        "image": "sdk-54",
+        "image": "sdk-57",
         "resourceClass": "m-medium"
       }
     },
@@ -51,8 +51,22 @@
       "ios": {
         "autoIncrement": "buildNumber",
         "distribution": "store",
-        "image": "sdk-54",
+        "image": "sdk-57",
         "resourceClass": "m-medium"
+      }
+    },
+    "staging-test": {
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "staging",
+      "distribution": "internal",
+      "env": {
+        "channel": "staging"
+      },
+      "extends": "beta",
+      "ios": {
+        "simulator": true
       }
     }
   },
