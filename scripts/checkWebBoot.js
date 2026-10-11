@@ -1,13 +1,16 @@
 // Loads a web export (npx expo export --platform web) in jsdom, with the network
-// blocked, and fails when the bundle throws while it starts or renders nothing.
-// Usage: node scripts/checkWebBoot.js [export folder] [seconds to wait for the first render]
+// blocked. Fails when the bundle throws while it loads, when start-up does not
+// get past its spinner, or when the first screen throws while it renders.
+// Not covered: anything behind the sign-in. Without a session the first screen
+// is the hand-over to the sign-in page: no library, no menu and no reader.
+// Usage: node scripts/checkWebBoot.js [export folder] [seconds to wait for the first screen]
 
 const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom'); // installed with jest-environment-jsdom
 
 const exportDir = path.resolve(process.argv[2] || 'dist');
-const timeout = Number(process.argv[3] || 30) * 1000;
+const timeout = (Number(process.argv[3]) || 30) * 1000;
 const settleTime = 2000;
 
 const html = fs.readFileSync(path.join(exportDir, 'index.html'), 'utf8');
@@ -16,6 +19,7 @@ const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map(
 );
 
 const errors = [];
+const rejections = [];
 let blockedRequests = 0;
 
 const describeError = (error) => String((error && error.stack) || error);
@@ -55,6 +59,9 @@ window.Worker = class {
 };
 window.URL.createObjectURL = () => 'blob:web-boot-check';
 window.URL.revokeObjectURL = () => {};
+// Fonts count as loaded at once. Without this the app waits 12 seconds for its
+// icon fonts before it leaves the start-up spinner
+window.document.fonts = { load: () => Promise.resolve([{}]) };
 window.matchMedia = () => ({
   matches: false,
   addListener() {},
@@ -78,8 +85,11 @@ window.WebSocket = undefined;
 window.addEventListener('error', ({ error, message }) => {
   errors.push(describeError(error || message));
 });
-// Rejected promises are expected, because the network is blocked
-process.on('unhandledRejection', () => {});
+// Rejected promises are expected, because the network is blocked. They are only
+// reported when start-up does not finish, where one of them may be the cause
+process.on('unhandledRejection', (reason) => {
+  rejections.push(describeError(reason));
+});
 
 const finish = () => {
   const root = window.document.getElementById('root');
@@ -91,6 +101,7 @@ const finish = () => {
   console.log(`Web boot check of ${exportDir}`);
   console.log(`  scripts loaded: ${scripts.length}`);
   console.log(`  elements under #root: ${elements}`);
+  console.log(`  text under #root: ${root ? root.textContent.trim() : ''}`);
   console.log(`  network requests blocked: ${blockedRequests}`);
   console.log(`  errors: ${errors.length}`);
   errors.forEach((error) => console.log(`\n${error}`));
@@ -106,13 +117,24 @@ try {
   finish();
 }
 
-// Wait for the first render, then a little longer for errors that follow it
+// Wait for the first screen, then a little longer for errors that follow it.
+// The start-up spinner has no text and the first screen has, so text under
+// #root means that start-up is over
 const startedAt = Date.now();
 const poll = setInterval(() => {
   const root = window.document.getElementById('root');
-  const rendered = root && root.childElementCount > 0;
-  if (rendered || Date.now() - startedAt > timeout) {
+  const started = root && root.textContent.trim() !== '';
+  const timedOut = Date.now() - startedAt > timeout;
+  if (started || timedOut || errors.length > 0) {
     clearInterval(poll);
-    setTimeout(finish, rendered ? settleTime : 0);
+    if (timedOut && !started) {
+      errors.push(
+        [
+          `No first screen after ${timeout / 1000} seconds: the app did not get past its start-up spinner.`,
+          ...rejections.map((rejection) => `Rejected promise: ${rejection}`),
+        ].join('\n'),
+      );
+    }
+    setTimeout(finish, started ? settleTime : 0);
   }
 }, 100);
