@@ -1,17 +1,17 @@
-import { useRef, useCallback, useEffect } from "react"
-import { View, Animated } from "react-native"
-import { StyleSheet } from "react-native"
-import { i18n } from "inline-i18n"
-import { BlurView } from 'expo-blur'
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useRef, useCallback, useEffect } from 'react';
+import { View, Animated } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { i18n } from 'inline-i18n';
+import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import useSetTimeout from "../../hooks/useSetTimeout"
-import { getStatusBarCurrentHeight } from "../../utils/toolbox"
+import useSetTimeout from '../../hooks/useSetTimeout';
+import { getStatusBarCurrentHeight } from '../../utils/toolbox';
 
-import Button from "../basic/Button"
-import Icon from '../basic/Icon'
+import Button from '../basic/Button';
+import Icon from '../basic/Icon';
 
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView)
+const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
 const styles = StyleSheet.create({
   container: {
@@ -23,50 +23,47 @@ const styles = StyleSheet.create({
     marginHorizontal: 30,
     alignSelf: 'center',
   },
-  button: {
-  },
+  button: {},
   checkIcon: {
     paddingHorizontal: 0,
     color: 'white',
     height: 20,
   },
-})
+});
 
 const Guide = ({
   blockUntilReady,
   ready,
   markComplete,
   children,
-  componentsAfterOkay=[],
+  componentsAfterOkay = [],
 }) => {
+  const opacity = useRef(new Animated.Value(0)).current;
 
-  const opacity = useRef(new Animated.Value(0)).current
+  const CheckIcon = useCallback(
+    () => (
+      <Icon name="check" pack="materialCommunity" style={[styles.checkIcon]} />
+    ),
+    [],
+  );
 
-  const CheckIcon = useCallback(() => <Icon name="check" pack="materialCommunity" style={[styles.checkIcon]} />, [])
+  const [setShowTimeout] = useSetTimeout();
 
-  const [ setShowTimeout ] = useSetTimeout()
+  const safeAreaInsets = useSafeAreaInsets();
 
-  const safeAreaInsets = useSafeAreaInsets()
+  useEffect(() => {
+    if (ready) {
+      setShowTimeout(() => {
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      }, 300);
+    }
+  }, [!!ready]);
 
-  useEffect(
-    () => {
-      if(ready) {
-        setShowTimeout(
-          () => {
-            Animated.timing(opacity, {
-              toValue: 1,
-              duration: 300,
-              useNativeDriver: true,
-            }).start()
-          },
-          300,
-        )
-      }
-    },
-    [ !!ready ],
-  )
-
-  if(!ready && !blockUntilReady) return null
+  if (!ready && !blockUntilReady) return null;
 
   return (
     <AnimatedBlurView
@@ -92,7 +89,7 @@ const Guide = ({
             styles.buttonContainer,
             {
               marginBottom: safeAreaInsets.bottom + 30,
-            }
+            },
           ]}
         >
           <Button
@@ -101,13 +98,13 @@ const Guide = ({
             accessoryLeft={CheckIcon}
             onPress={markComplete}
           >
-            {i18n("Okay")}
+            {i18n('Okay')}
           </Button>
         </View>
         {componentsAfterOkay}
       </View>
     </AnimatedBlurView>
-  )
-}
+  );
+};
 
-export default Guide
+export default Guide;

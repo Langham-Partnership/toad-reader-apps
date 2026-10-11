@@ -1,22 +1,26 @@
-import React, { useRef, useCallback, useState, useEffect } from "react"
-import { StyleSheet, Platform, View, Keyboard } from "react-native"
-import { bindActionCreators } from "redux"
-import { connect } from "react-redux"
-import useUnmount from "react-use/lib/useUnmount"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import React, { useRef, useCallback, useState, useEffect } from 'react';
+import { StyleSheet, Platform, View, Keyboard } from 'react-native';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+import useUnmount from 'react-use/lib/useUnmount';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { setStatusBarHidden, getStatusBarCurrentHeight, getIsAndroidWithCameraWithinScreen } from '../../utils/toolbox'
+import {
+  setStatusBarHidden,
+  getStatusBarCurrentHeight,
+  getIsAndroidWithCameraWithinScreen,
+} from '../../utils/toolbox';
 
-import useWideMode from "../../hooks/useWideMode"
-import useRouterState from "../../hooks/useRouterState"
-import useDimensions from "../../hooks/useDimensions"
-import { setHighlight } from "../../redux/actions"
+import useWideMode from '../../hooks/useWideMode';
+import useRouterState from '../../hooks/useRouterState';
+import useDimensions from '../../hooks/useDimensions';
+import { setHighlight } from '../../redux/actions';
 
-import HighlighterLabel from '../basic/HighlighterLabel'
-import HighlighterNotes from '../basic/HighlighterNotes'
-import HighlighterSketch from '../basic/HighlighterSketch'
-import BackFunction from '../basic/BackFunction'
-import HighlighterInstructorHighlightSection from "./HighlighterInstructorHighlightSection"
+import HighlighterLabel from '../basic/HighlighterLabel';
+import HighlighterNotes from '../basic/HighlighterNotes';
+import HighlighterSketch from '../basic/HighlighterSketch';
+import BackFunction from '../basic/BackFunction';
+import HighlighterInstructorHighlightSection from './HighlighterInstructorHighlightSection';
 
 const styles = StyleSheet.create({
   clearCover: {
@@ -41,235 +45,280 @@ const styles = StyleSheet.create({
   containerTopWideMode: {
     paddingTop: 0,
   },
-})
+});
 
-const Highlighter = React.memo(({
-  noteInEdit,
-  sketchInEdit,
-  selectionInfo,  // Eg: {"text":"Crossway","spineIdRef":"info","cfi":"/4/2/4,/1:16,/1:24","copyTooltipInLowerHalf":false}
-  bookId,
-  idpId,
-  setSelectionText,
-  updateNoteInEdit,
-  updateSketchInEdit,
+const Highlighter = React.memo(
+  ({
+    noteInEdit,
+    sketchInEdit,
+    selectionInfo, // Eg: {"text":"Crossway","spineIdRef":"info","cfi":"/4/2/4,/1:16,/1:24","copyTooltipInLowerHalf":false}
+    bookId,
+    idpId,
+    setSelectionText,
+    updateNoteInEdit,
+    updateSketchInEdit,
 
-  books,
-  userDataByBookId,
+    books,
+    userDataByBookId,
 
-  setHighlight,
-}) => {
+    setHighlight,
+  }) => {
+    // We do not use useState here, because we don't want to wait until the next render.
+    // We do not use a simple local variable here, because we sometimes want it to
+    // not change from the previous value.
+    const highlight = useRef();
+    const isEditingNote = noteInEdit != null;
+    const isEditingSketch = sketchInEdit !== undefined;
 
-  // We do not use useState here, because we don't want to wait until the next render.
-  // We do not use a simple local variable here, because we sometimes want it to
-  // not change from the previous value.
-  const highlight = useRef()
-  const isEditingNote = noteInEdit != null
-  const isEditingSketch = sketchInEdit !== undefined
+    if (noteInEdit == null && sketchInEdit == null) {
+      const thisBooksHighlights =
+        (userDataByBookId[bookId] || {}).highlights || [];
 
-  if(noteInEdit == null && sketchInEdit == null) {
-
-    const thisBooksHighlights = (userDataByBookId[bookId] || {}).highlights || []
-
-    if(!thisBooksHighlights.some(h => {
-      if(h.spineIdRef === selectionInfo.spineIdRef && h.cfi === selectionInfo.cfi) {
-        highlight.current = h._delete ? undefined : h
-        return true
+      if (
+        !thisBooksHighlights.some((h) => {
+          if (
+            h.spineIdRef === selectionInfo.spineIdRef &&
+            h.cfi === selectionInfo.cfi
+          ) {
+            highlight.current = h._delete ? undefined : h;
+            return true;
+          }
+        })
+      ) {
+        highlight.current = undefined;
       }
-    })) {
-      highlight.current = undefined
     }
 
-  }
+    const { routerState } = useRouterState();
+    const { widget } = routerState;
 
-  const { routerState } = useRouterState()
-  const { widget } = routerState
+    const wideMode = useWideMode();
+    const safeAreaInsets = useSafeAreaInsets();
 
-  const wideMode = useWideMode()
-  const safeAreaInsets = useSafeAreaInsets()
+    const [keyboardShowing, setKeyboardShowing] = useState(false);
 
-  const [ keyboardShowing, setKeyboardShowing ] = useState(false)
-
-  useEffect(
-    () => {
-      const show = () => setKeyboardShowing(true)
+    useEffect(() => {
+      const show = () => setKeyboardShowing(true);
       const hide = () => {
-        setKeyboardShowing(false)
-        setStatusBarHidden(!wideMode || Platform.OS === 'ios')
-      }
+        setKeyboardShowing(false);
+        setStatusBarHidden(!wideMode || Platform.OS === 'ios');
+      };
 
-      const keyboardWillShowListener = Keyboard.addListener('keyboardWillShow', show)
-      const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', show)
-      const keyboardWillHideListener = Keyboard.addListener('keyboardWillHide', hide)
-      const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', hide)
+      const keyboardWillShowListener = Keyboard.addListener(
+        'keyboardWillShow',
+        show,
+      );
+      const keyboardDidShowListener = Keyboard.addListener(
+        'keyboardDidShow',
+        show,
+      );
+      const keyboardWillHideListener = Keyboard.addListener(
+        'keyboardWillHide',
+        hide,
+      );
+      const keyboardDidHideListener = Keyboard.addListener(
+        'keyboardDidHide',
+        hide,
+      );
 
       return () => {
-        keyboardDidShowListener.remove()
-        keyboardWillShowListener.remove()
-        keyboardDidHideListener.remove()
-        keyboardWillHideListener.remove()
-      }
-    },
-    [ wideMode ],
-  )
+        keyboardDidShowListener.remove();
+        keyboardWillShowListener.remove();
+        keyboardDidHideListener.remove();
+        keyboardWillHideListener.remove();
+      };
+    }, [wideMode]);
 
-  useEffect(
-    () => {
-      if(highlight.current && !highlight.current.share_quote) {
+    useEffect(() => {
+      if (highlight.current && !highlight.current.share_quote) {
         setHighlight({
           ...highlight.current,
           bookId,
           share_quote: selectionInfo.text,
           bookInfoForAnalytics: books[bookId],
-        })
+        });
       }
-    },
-    [ selectionInfo ],
-  )
+    }, [selectionInfo]);
 
-  const setEditingNote = useCallback(
-    (editingNote, skipSetSelectionText) => {
-      const { spineIdRef, cfi } = selectionInfo || {}
+    const setEditingNote = useCallback(
+      (editingNote, skipSetSelectionText) => {
+        const { spineIdRef, cfi } = selectionInfo || {};
 
-      if(editingNote) {
-        updateNoteInEdit(highlight.current.note)
+        if (editingNote) {
+          updateNoteInEdit(highlight.current.note);
+        } else if (isEditingNote) {
+          setHighlight({
+            ...highlight.current,
+            bookId,
+            note: noteInEdit,
+            bookInfoForAnalytics: books[bookId],
+          });
 
-      } else if(isEditingNote) {
-        setHighlight({
-          ...highlight.current,
-          bookId,
-          note: noteInEdit,
-          bookInfoForAnalytics: books[bookId],
-        })
+          updateNoteInEdit(null);
 
-        updateNoteInEdit(null)
-
-        if(!skipSetSelectionText) {
-          setSelectionText({
-            spineIdRef,
-            cfi,
-          })
-        }
-      }
-    },
-    [ books, bookId, noteInEdit, isEditingNote, selectionInfo, updateNoteInEdit, setSelectionText ],
-  )
-
-  const endEditingNote = Keyboard.dismiss
-
-  const setEditingSketch = useCallback(
-    (editingSketch, skipSetSelectionText) => {
-      const { spineIdRef, cfi } = selectionInfo || {}
-
-      if(editingSketch) {
-        updateSketchInEdit(highlight.current.sketch || null)
-
-      } else if(isEditingSketch) {
-        const sketch = (
-          (JSON.parse((sketchInEdit || {}).sketchData || `{}`).objects || []).length === 0
-            ? null
-            : sketchInEdit
-        )
-        setHighlight({
-          ...highlight.current,
-          bookId,
-          sketch,
-          bookInfoForAnalytics: books[bookId],
-        })
-
-        updateSketchInEdit(undefined)
-
-        if(!skipSetSelectionText) {
-          setSelectionText({
-            spineIdRef,
-            cfi,
-          })
-        }
-      }
-    },
-    [ books, bookId, sketchInEdit, isEditingSketch, selectionInfo, updateSketchInEdit, setSelectionText ],
-  )
-
-  useUnmount(
-    () => {
-      setEditingNote(false, true)
-      setEditingSketch(false, true)
-    }
-  )
-
-  const windowTooShortToShowNotes = useDimensions().window.height < 350
-
-  const preventDefault = useCallback(
-    event => {
-      event.preventDefault()
-      event.stopPropagation()
-    },
-    [],
-  )
-
-  return [
-    ...(isEditingNote ? [ <View key="cover" style={styles.clearCover} /> ] : []),
-    <BackFunction key="back" func={isEditingNote ? endEditingNote : (isEditingSketch ? setEditingSketch : setSelectionText)} />,
-    <View
-      key="container"
-      style={[
-        styles.container,
-        ((selectionInfo.copyTooltipInLowerHalf || keyboardShowing)
-          ? {
-            top: safeAreaInsets.top > 30 ? (safeAreaInsets.top - 20) * -1 : 0,
-            paddingTop: Math.max(safeAreaInsets.top + getStatusBarCurrentHeight() - 10 - (getIsAndroidWithCameraWithinScreen() ? 20 : 0), 0),
+          if (!skipSetSelectionText) {
+            setSelectionText({
+              spineIdRef,
+              cfi,
+            });
           }
-          : {
-            bottom: 0,
-            paddingBottom: safeAreaInsets.bottom,
+        }
+      },
+      [
+        books,
+        bookId,
+        noteInEdit,
+        isEditingNote,
+        selectionInfo,
+        updateNoteInEdit,
+        setSelectionText,
+      ],
+    );
+
+    const endEditingNote = Keyboard.dismiss;
+
+    const setEditingSketch = useCallback(
+      (editingSketch, skipSetSelectionText) => {
+        const { spineIdRef, cfi } = selectionInfo || {};
+
+        if (editingSketch) {
+          updateSketchInEdit(highlight.current.sketch || null);
+        } else if (isEditingSketch) {
+          const sketch =
+            (JSON.parse((sketchInEdit || {}).sketchData || `{}`).objects || [])
+              .length === 0
+              ? null
+              : sketchInEdit;
+          setHighlight({
+            ...highlight.current,
+            bookId,
+            sketch,
+            bookInfoForAnalytics: books[bookId],
+          });
+
+          updateSketchInEdit(undefined);
+
+          if (!skipSetSelectionText) {
+            setSelectionText({
+              spineIdRef,
+              cfi,
+            });
           }
-        ),
-        ((selectionInfo.copyTooltipInLowerHalf && wideMode && !widget) ? styles.containerTopWideMode : null),
-      ]}
-      onTouchEnd={!isEditingNote ? preventDefault : null}
-    >
-      <HighlighterInstructorHighlightSection
-        bookId={bookId}
-        highlight={highlight.current}
-        selectionInfo={selectionInfo}
-      />
-      <HighlighterLabel
-        idpId={idpId}
-        selectionInfo={selectionInfo}
-        bookId={bookId}
-        highlight={highlight.current}
-        // setSelectionText={setSelectionText}
-        endEditingNote={endEditingNote}
-        isEditingNote={isEditingNote}
-        hasSketch={!!(highlight.current || {}).sketch}
-        setEditingSketch={setEditingSketch}
-      />
-      {!!highlight.current && !windowTooShortToShowNotes &&
-        <HighlighterNotes
-          note={isEditingNote ? noteInEdit : highlight.current.note}
-          updateNoteInEdit={updateNoteInEdit}
-          setEditingNote={setEditingNote}
-          isEditingNote={isEditingNote}
+        }
+      },
+      [
+        books,
+        bookId,
+        sketchInEdit,
+        isEditingSketch,
+        selectionInfo,
+        updateSketchInEdit,
+        setSelectionText,
+      ],
+    );
+
+    useUnmount(() => {
+      setEditingNote(false, true);
+      setEditingSketch(false, true);
+    });
+
+    const windowTooShortToShowNotes = useDimensions().window.height < 350;
+
+    const preventDefault = useCallback((event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    }, []);
+
+    return [
+      ...(isEditingNote
+        ? [<View key="cover" style={styles.clearCover} />]
+        : []),
+      <BackFunction
+        key="back"
+        func={
+          isEditingNote
+            ? endEditingNote
+            : isEditingSketch
+              ? setEditingSketch
+              : setSelectionText
+        }
+      />,
+      <View
+        key="container"
+        style={[
+          styles.container,
+          selectionInfo.copyTooltipInLowerHalf || keyboardShowing
+            ? {
+                top:
+                  safeAreaInsets.top > 30 ? (safeAreaInsets.top - 20) * -1 : 0,
+                paddingTop: Math.max(
+                  safeAreaInsets.top +
+                    getStatusBarCurrentHeight() -
+                    10 -
+                    (getIsAndroidWithCameraWithinScreen() ? 20 : 0),
+                  0,
+                ),
+              }
+            : {
+                bottom: 0,
+                paddingBottom: safeAreaInsets.bottom,
+              },
+          selectionInfo.copyTooltipInLowerHalf && wideMode && !widget
+            ? styles.containerTopWideMode
+            : null,
+        ]}
+        onTouchEnd={!isEditingNote ? preventDefault : null}
+      >
+        <HighlighterInstructorHighlightSection
+          bookId={bookId}
+          highlight={highlight.current}
+          selectionInfo={selectionInfo}
         />
-      }
-    </View>,
-    ...(!isEditingSketch ? [] : [
-      <HighlighterSketch
-        key="sketch"
-        sketch={sketchInEdit}
-        updateSketchInEdit={updateSketchInEdit}
-        setEditingSketch={setEditingSketch}
-      />
-    ]),
-  ]
-})
+        <HighlighterLabel
+          idpId={idpId}
+          selectionInfo={selectionInfo}
+          bookId={bookId}
+          highlight={highlight.current}
+          // setSelectionText={setSelectionText}
+          endEditingNote={endEditingNote}
+          isEditingNote={isEditingNote}
+          hasSketch={!!(highlight.current || {}).sketch}
+          setEditingSketch={setEditingSketch}
+        />
+        {!!highlight.current && !windowTooShortToShowNotes && (
+          <HighlighterNotes
+            note={isEditingNote ? noteInEdit : highlight.current.note}
+            updateNoteInEdit={updateNoteInEdit}
+            setEditingNote={setEditingNote}
+            isEditingNote={isEditingNote}
+          />
+        )}
+      </View>,
+      ...(!isEditingSketch
+        ? []
+        : [
+            <HighlighterSketch
+              key="sketch"
+              sketch={sketchInEdit}
+              updateSketchInEdit={updateSketchInEdit}
+              setEditingSketch={setEditingSketch}
+            />,
+          ]),
+    ];
+  },
+);
 
 const mapStateToProps = ({ books, userDataByBookId }) => ({
   books,
   userDataByBookId,
-})
+});
 
-const matchDispatchToProps = (dispatch) => bindActionCreators({
-  setHighlight,
-}, dispatch)
+const matchDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      setHighlight,
+    },
+    dispatch,
+  );
 
-export default connect(mapStateToProps, matchDispatchToProps)(Highlighter)
+export default connect(mapStateToProps, matchDispatchToProps)(Highlighter);

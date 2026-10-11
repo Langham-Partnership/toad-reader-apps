@@ -1,6 +1,6 @@
-import { StyleSheet, View, Text, Platform } from "react-native"
+import { StyleSheet, View, Text, Platform } from 'react-native';
 
-import useDimensions from "../../hooks/useDimensions"
+import useDimensions from '../../hooks/useDimensions';
 
 const styles = StyleSheet.create({
   container1: {
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 15,
   },
-})
+});
 
 const ToastContainer = ({ text }) => {
   const { width, height } = useDimensions().window;
@@ -38,23 +38,20 @@ const ToastContainer = ({ text }) => {
         {
           width,
           top: height,
-        }
+        },
       ]}
     >
       <View style={styles.container2}>
         <View style={styles.spacer} />
         <View style={styles.toast}>
-          <Text
-            style={styles.text}
-            numberOfLines={1}
-          >
+          <Text style={styles.text} numberOfLines={1}>
             {text}
           </Text>
         </View>
         <View style={styles.spacer} />
       </View>
     </View>
-  )
-}
+  );
+};
 
-export default ToastContainer
+export default ToastContainer;

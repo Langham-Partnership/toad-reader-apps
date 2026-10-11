@@ -1,22 +1,24 @@
-import { useState, useRef, useEffect, useCallback } from "react"
-import Constants from 'expo-constants'
-import { bindActionCreators } from "redux"
-import { connect } from "react-redux"
-import { StyleSheet, View, Platform } from "react-native"
-import WebView from "./WebView"
-import * as FileSystem from 'expo-file-system'
-import usePrevious from "react-use/lib/usePrevious"
+import { useState, useRef, useEffect, useCallback } from 'react';
+import Constants from 'expo-constants';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+import { StyleSheet, View, Platform } from 'react-native';
+import WebView from './WebView';
+import * as FileSystem from 'expo-file-system';
+import usePrevious from 'react-use/lib/usePrevious';
 
-import { postMessage } from "../../utils/postMessage"
-import { getBooksDir, getDataOrigin, bookCookiesToCookieStr } from "../../utils/toolbox"
-import useAdjustedDimensions from "../../hooks/useAdjustedDimensions"
-import useRouterState from "../../hooks/useRouterState"
-import getReaderCode from '../../../getReaderCode'
+import { postMessage } from '../../utils/postMessage';
+import {
+  getBooksDir,
+  getDataOrigin,
+  bookCookiesToCookieStr,
+} from '../../utils/toolbox';
+import useAdjustedDimensions from '../../hooks/useAdjustedDimensions';
+import useRouterState from '../../hooks/useRouterState';
+import getReaderCode from '../../../getReaderCode';
 
-const {
-  DEV_USE_DEVELOPMENT_BACKEND,
-  ENABLE_WIDE_TABLE_BEHAVIOR=false,
-} = Constants.expoConfig.extra
+const { DEV_USE_DEVELOPMENT_BACKEND, ENABLE_WIDE_TABLE_BEHAVIOR = false } =
+  Constants.expoConfig.extra;
 
 const styles = StyleSheet.create({
   containerNormal: {
@@ -26,66 +28,72 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
   },
-})
+});
 
-const getHighlightsArray = ({ userDataByBookId, bookId, instructorHighlights }) => {
+const getHighlightsArray = ({
+  userDataByBookId,
+  bookId,
+  instructorHighlights,
+}) => {
   const highlights = ((userDataByBookId[bookId] || {}).highlights || [])
     .filter(({ _delete }) => !_delete)
     .map(({ spineIdRef, cfi, note, sketch, color }) => ({
       spineIdRef,
       cfi,
-      hasNote: !!(note || "").trim() || !!sketch,
+      hasNote: !!(note || '').trim() || !!sketch,
       type: `user${color || 1}`,
-    }))
+    }));
 
-  const highlightsByKey = {}
-  highlights.forEach(highlight => {
-    highlightsByKey[`${highlight.spineIdRef}\n${highlight.cfi}`] = highlight
-  })
-
-  ;(instructorHighlights || []).forEach(({ spineIdRef, cfi, note, sketch }) => {
-    if(highlightsByKey[`${spineIdRef}\n${cfi}`]) {
-      highlightsByKey[`${spineIdRef}\n${cfi}`].type = `${highlightsByKey[`${spineIdRef}\n${cfi}`].type}-instructor`
-      highlightsByKey[`${spineIdRef}\n${cfi}`].hasNote = highlightsByKey[`${spineIdRef}\n${cfi}`].hasNote || !!(note || "").trim() || !!sketch
-
+  const highlightsByKey = {};
+  highlights.forEach((highlight) => {
+    highlightsByKey[`${highlight.spineIdRef}\n${highlight.cfi}`] = highlight;
+  });
+  (instructorHighlights || []).forEach(({ spineIdRef, cfi, note, sketch }) => {
+    if (highlightsByKey[`${spineIdRef}\n${cfi}`]) {
+      highlightsByKey[`${spineIdRef}\n${cfi}`].type =
+        `${highlightsByKey[`${spineIdRef}\n${cfi}`].type}-instructor`;
+      highlightsByKey[`${spineIdRef}\n${cfi}`].hasNote =
+        highlightsByKey[`${spineIdRef}\n${cfi}`].hasNote ||
+        !!(note || '').trim() ||
+        !!sketch;
     } else {
       highlightsByKey[`${spineIdRef}\n${cfi}`] = {
         spineIdRef,
         cfi,
-        hasNote: !!(note || "").trim() || !!sketch,
-        type: "instructor",
-      }
-      highlights.push(highlightsByKey[`${spineIdRef}\n${cfi}`])
+        hasNote: !!(note || '').trim() || !!sketch,
+        type: 'instructor',
+      };
+      highlights.push(highlightsByKey[`${spineIdRef}\n${cfi}`]);
     }
-  })
+  });
 
-  return highlights
-}
+  return highlights;
+};
 
-const getLatestLocation = ({ userDataByBookId, bookId }) => (userDataByBookId[bookId] || {}).latest_location
+const getLatestLocation = ({ userDataByBookId, bookId }) =>
+  (userDataByBookId[bookId] || {}).latest_location;
 
 const getHighlightsForThisSpine = ({ highlights, location }) => {
   try {
-    const spineIdRef = JSON.parse(location).idref
-    return highlights.filter(highlight => highlight.spineIdRef === spineIdRef)
-  } catch(e) {  // eslint-disable-line @typescript-eslint/no-unused-vars
-    return []
+    const spineIdRef = JSON.parse(location).idref;
+    return highlights.filter(
+      (highlight) => highlight.spineIdRef === spineIdRef,
+    );
+  } catch {
+    return [];
   }
-}
+};
 
 const PageWebView = ({
-
   // We need these up-to-date
   onMessage,
   onError,
   sidePanelSettings,
 
   ...props
-
 }) => {
-
   // props are put in state so as to use their initial value only
-  const [ initialProps ] = useState(props)
+  const [initialProps] = useState(props);
   const {
     bookId,
     initialLocation,
@@ -103,9 +111,9 @@ const PageWebView = ({
     accounts,
     books,
     // userDataByBookId,  // used in getHighlightsArray and getLatestLocation functions
-  } = initialProps
+  } = initialProps;
 
-  const [ unloaded, setUnloaded ] = useState(false)
+  const [unloaded, setUnloaded] = useState(false);
 
   // DISABLED. TODO if the below issue is no longer valid, please delete.
   // See https://github.com/react-native-community/react-native-webview/issues/656 for an
@@ -113,13 +121,14 @@ const PageWebView = ({
   //const [ renderedOnce, setRenderedOnce ] = useState(Platform.OS !== 'android')
   //const setRenderedOnceTrue = useCallback(() => setRenderedOnce(true), [])
 
-  const webViewLocalRef = useRef()
-  const webView= webViewRef || webViewLocalRef
+  const webViewLocalRef = useRef();
+  const webView = webViewRef || webViewLocalRef;
 
-  const { routerState } = useRouterState()
-  const { widget } = routerState
+  const { routerState } = useRouterState();
+  const { widget } = routerState;
 
-  const { truePageWidth: width, truePageHeight: height } = useAdjustedDimensions({ sidePanelSettings, widget })
+  const { truePageWidth: width, truePageHeight: height } =
+    useAdjustedDimensions({ sidePanelSettings, widget });
 
   /* DISABLED because it does nothing. TODO delete this or fix it.
   useEffect(
@@ -134,136 +143,137 @@ const PageWebView = ({
   )
   */
 
-  const prevProps = usePrevious(props)
+  const prevProps = usePrevious(props);
 
-  useEffect(
-    () => {
-      if(!prevProps) return
+  useEffect(() => {
+    if (!prevProps) return;
 
-      const oldHighlightsInThisSpine = getHighlightsForThisSpine({
-        highlights: getHighlightsArray(prevProps),
-        location: getLatestLocation(prevProps),
-      })
-      const newHighlightsInThisSpine = getHighlightsForThisSpine({
-        highlights: getHighlightsArray(props),
-        location: getLatestLocation(props),
-      })
+    const oldHighlightsInThisSpine = getHighlightsForThisSpine({
+      highlights: getHighlightsArray(prevProps),
+      location: getLatestLocation(prevProps),
+    });
+    const newHighlightsInThisSpine = getHighlightsForThisSpine({
+      highlights: getHighlightsArray(props),
+      location: getLatestLocation(props),
+    });
 
-      if(JSON.stringify(newHighlightsInThisSpine) !== JSON.stringify(oldHighlightsInThisSpine)) {
-        postMessage(webView.current, 'renderHighlights', {
-          highlights: newHighlightsInThisSpine,
-        })
-      }
-    },
-    [ props.userDataByBookId, props.bookId, props.instructorHighlights ],
-  )
+    if (
+      JSON.stringify(newHighlightsInThisSpine) !==
+      JSON.stringify(oldHighlightsInThisSpine)
+    ) {
+      postMessage(webView.current, 'renderHighlights', {
+        highlights: newHighlightsInThisSpine,
+      });
+    }
+  }, [props.userDataByBookId, props.bookId, props.instructorHighlights]);
 
   const onMessageEvent = useCallback(
-    async event => {
-      const data = JSON.parse(event.nativeEvent.data)
+    async (event) => {
+      const data = JSON.parse(event.nativeEvent.data);
 
-      if(onMessage && await onMessage(webView.current, data)) return
+      if (onMessage && (await onMessage(webView.current, data))) return;
 
-      switch(data.identifier) {
-
+      switch (data.identifier) {
         case 'unload':
-          console.log('reader unloading (this should not happen)')
-          setUnloaded(true)
+          console.log('reader unloading (this should not happen)');
+          setUnloaded(true);
           break;
 
         case 'loaded':
-          console.log('reader loaded')
-          webView.current.loaded = true
+          console.log('reader loaded');
+          webView.current.loaded = true;
           break;
 
         case 'consoleLog':
-          console.log('consoleLog', data.payload.message)
+          console.log('consoleLog', data.payload.message);
           break;
 
         case 'getFileAsText': {
-          const { uri } = data.payload
+          const { uri } = data.payload;
           FileSystem.readAsStringAsync(`${uri.replace(/#.*$/, '')}`)
-            .then(async fileText => {
+            .then(async (fileText) => {
               postMessage(webView.current, 'fileAsText', {
                 uri,
                 fileText,
-              })
+              });
             })
             .catch(() => {
-              console.log('getFileAsText error: ' + uri)
+              console.log('getFileAsText error: ' + uri);
               postMessage(webView.current, 'fileAsText', {
                 uri,
                 error: true,
-              })
-            })
+              });
+            });
           break;
         }
 
         default:
-          console.log(data.identifier, JSON.stringify(data.payload))
+          console.log(data.identifier, JSON.stringify(data.payload));
           break;
-
       }
     },
-    [ onMessage ],
-  )
+    [onMessage],
+  );
 
-  if(unloaded) return null
+  if (unloaded) return null;
 
   const initialHighlightsInThisSpine = getHighlightsForThisSpine({
     location: initialLocation,
     highlights: getHighlightsArray(initialProps),
-  })
+  });
 
-  const initialCookiePathForWidget = widget ? `/c/${Object.values(accounts)[0].cookie}` : ``
-  const baseUrlForDevOrWidget = (
-    ((__DEV__ && DEV_USE_DEVELOPMENT_BACKEND) || widget)
+  const initialCookiePathForWidget = widget
+    ? `/c/${Object.values(accounts)[0].cookie}`
+    : ``;
+  const baseUrlForDevOrWidget =
+    (__DEV__ && DEV_USE_DEVELOPMENT_BACKEND) || widget
       ? `${getDataOrigin(Object.values(idps)[0])}${initialCookiePathForWidget}`
-      : ``
-  )
+      : ``;
   const initialQueryStringParams = {
-    epub: (
+    epub:
       Platform.OS === 'web'
         ? `${baseUrlForDevOrWidget}/epub_content/book_${bookId}`
-        : `${getBooksDir()}${bookId}`
-    ),
+        : `${getBooksDir()}${bookId}`,
+  };
+
+  if (initialLocation) {
+    initialQueryStringParams.goto = initialLocation;
   }
 
-  if(initialLocation) {
-    initialQueryStringParams.goto = initialLocation
+  if (initialDisplaySettings) {
+    initialQueryStringParams.settings = JSON.stringify(initialDisplaySettings);
   }
 
-  if(initialDisplaySettings) {
-    initialQueryStringParams.settings = JSON.stringify(initialDisplaySettings)
+  if (ENABLE_WIDE_TABLE_BEHAVIOR) {
+    initialQueryStringParams.enableWideTableBehavior = `true`;
   }
 
-  if(ENABLE_WIDE_TABLE_BEHAVIOR) {
-    initialQueryStringParams.enableWideTableBehavior = `true`
-  }
-
-  if(initialAddlParams) {
-    for(let key in initialAddlParams) {
-      initialQueryStringParams[key] = JSON.stringify(initialAddlParams[key])
+  if (initialAddlParams) {
+    for (let key in initialAddlParams) {
+      initialQueryStringParams[key] = JSON.stringify(initialAddlParams[key]);
     }
   }
 
   const source = {
-    uri: Platform.OS === 'web'
-      ? window.location.origin
-      : (
-        `${FileSystem.documentDirectory}reader/index.html?${
-          Object.keys(initialQueryStringParams)
-            .map(key => `${key}=${encodeURIComponent(initialQueryStringParams[key])}`)
-            .join('&')
-        }`
-      )
-  }
+    uri:
+      Platform.OS === 'web'
+        ? window.location.origin
+        : `${FileSystem.documentDirectory}reader/index.html?${Object.keys(
+            initialQueryStringParams,
+          )
+            .map(
+              (key) =>
+                `${key}=${encodeURIComponent(initialQueryStringParams[key])}`,
+            )
+            .join('&')}`,
+  };
 
-  if(Platform.OS === 'web') {
-      // Put the following line before <script> if needed
-      // <base href="${getDataOrigin(idp)}">
-      source.html = getReaderCode()
-        .replace(/(<head>)/i, `
+  if (Platform.OS === 'web') {
+    // Put the following line before <script> if needed
+    // <base href="${getDataOrigin(idp)}">
+    source.html = getReaderCode().replace(
+      /(<head>)/i,
+      `
           $1
           <script>
             window.isWebPlatform = true;
@@ -275,22 +285,20 @@ const PageWebView = ({
             window.epubFileFetchHeaders = ${JSON.stringify(
               __DEV__ && DEV_USE_DEVELOPMENT_BACKEND
                 ? {
-                  "x-cookie-override": Object.values(accounts)[0].cookie,
-                }
+                    'x-cookie-override': Object.values(accounts)[0].cookie,
+                  }
                 : {
-                  cookie: bookCookiesToCookieStr(books[bookId].bookCookies),
-                }
+                    cookie: bookCookiesToCookieStr(books[bookId].bookCookies),
+                  },
             )};
           </script>
-        `)
+        `,
+    );
   }
 
   return (
     <View
-      style={[
-        styles.containerNormal,
-        containerStyle,
-      ]}
+      style={[styles.containerNormal, containerStyle]}
       collapsable={false}
       ref={viewRef}
     >
@@ -314,7 +322,6 @@ const PageWebView = ({
         onMessage={onMessageEvent}
         //onLoad={setRenderedOnceTrue}  // DISABLED. Can we remove this?
         forwardRef={webView}
-
         // The rest of the props are ignored when on web platform
         injectedJavaScript={`
           window.doReportToolSpots = ${doReportToolSpots};
@@ -330,18 +337,23 @@ const PageWebView = ({
         bounces={false}
       />
     </View>
-  )
-}
+  );
+};
 
-const mapStateToProps = ({ idps, accounts, books, userDataByBookId, sidePanelSettings }) => ({
+const mapStateToProps = ({
   idps,
   accounts,
   books,
   userDataByBookId,
   sidePanelSettings,
-})
+}) => ({
+  idps,
+  accounts,
+  books,
+  userDataByBookId,
+  sidePanelSettings,
+});
 
-const matchDispatchToProps = (dispatch) => bindActionCreators({
-}, dispatch)
+const matchDispatchToProps = (dispatch) => bindActionCreators({}, dispatch);
 
-export default connect(mapStateToProps, matchDispatchToProps)(PageWebView)
+export default connect(mapStateToProps, matchDispatchToProps)(PageWebView);

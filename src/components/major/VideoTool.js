@@ -1,12 +1,12 @@
-import React, { useEffect, useCallback, useRef } from "react"
-import { StyleSheet, View, Dimensions, Platform } from "react-native"
-import * as ScreenOrientation from 'expo-screen-orientation'
-import { getLocale } from "inline-i18n"
-import { Video, ResizeMode, VideoFullscreenUpdate } from 'expo-av'
+import React, { useEffect, useCallback, useRef } from 'react';
+import { StyleSheet, View, Dimensions, Platform } from 'react-native';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import { getLocale } from 'inline-i18n';
+import { Video, ResizeMode, VideoFullscreenUpdate } from 'expo-av';
 
-import useWideMode from "../../hooks/useWideMode"
+import useWideMode from '../../hooks/useWideMode';
 
-import WebView from "./WebView"
+import WebView from './WebView';
 
 const styles = StyleSheet.create({
   container: {
@@ -27,235 +27,207 @@ const styles = StyleSheet.create({
   video: {
     position: `relative`,
   },
-})
+});
 
-export const vimeoRegex = /^https:\/\/(?:www\.)?vimeo\.com\/(?:.*?\/video\/|channels\/[^/]*\/)?([0-9]+)(?:\/[^/]*)?\/?$/
-export const youtubeRegex = /^https:\/\/(?:www\.)?youtube\.com\/watch\?v=([^&]*).*$/
-export const shortYoutubeRegex = /^https:\/\/youtu\.be\/([^?]+).*$/
+export const vimeoRegex =
+  /^https:\/\/(?:www\.)?vimeo\.com\/(?:.*?\/video\/|channels\/[^/]*\/)?([0-9]+)(?:\/[^/]*)?\/?$/;
+export const youtubeRegex =
+  /^https:\/\/(?:www\.)?youtube\.com\/watch\?v=([^&]*).*$/;
+export const shortYoutubeRegex = /^https:\/\/youtu\.be\/([^?]+).*$/;
 
-const VideoTool = React.memo(({
-  toolUid,
-  videoLink,
-  startTime,
-  endTime,
-  subtitlesOn,
-  containerStyle,
-  logUsageEvent,
-}) => {
+const VideoTool = React.memo(
+  ({
+    toolUid,
+    videoLink,
+    startTime,
+    endTime,
+    subtitlesOn,
+    containerStyle,
+    logUsageEvent,
+  }) => {
+    const wideModeWithEitherOrientation = useWideMode(true);
 
-  const wideModeWithEitherOrientation = useWideMode(true)
+    const videoRef = useRef();
+    const prevIsPlaying = useRef(false);
+    const totalTimePlayed = useRef(0);
+    const currentPlaybackStartTime = useRef();
 
-  const videoRef = useRef()
-  const prevIsPlaying = useRef(false)
-  const totalTimePlayed = useRef(0)
-  const currentPlaybackStartTime = useRef()
+    useEffect(
+      () => async () => {
+        if (Platform.OS === 'ios' && !wideModeWithEitherOrientation) {
+          const { width, height } = Dimensions.get('window');
 
-  useEffect(
-    () => async () => {
-      if(Platform.OS === 'ios' && !wideModeWithEitherOrientation) {
-
-        const { width, height } = Dimensions.get('window')
-
-        if(width > height) {
-          // iOS has a bug where Dimensions presents backwards values after a fullscreen video
-          // which had its orientation changed. The following is the only fix I have found.
-          ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
-          ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP)
+          if (width > height) {
+            // iOS has a bug where Dimensions presents backwards values after a fullscreen video
+            // which had its orientation changed. The following is the only fix I have found.
+            ScreenOrientation.lockAsync(
+              ScreenOrientation.OrientationLock.LANDSCAPE,
+            );
+            ScreenOrientation.lockAsync(
+              ScreenOrientation.OrientationLock.PORTRAIT_UP,
+            );
+          }
         }
-      }
-    },
-    [],
-  )
+      },
+      [],
+    );
 
-  const onFullscreenUpdate = useCallback(
-    ({ fullscreenUpdate }) => {
-      if(wideModeWithEitherOrientation) return
-      if(Platform.OS === 'web') return
+    const onFullscreenUpdate = useCallback(
+      ({ fullscreenUpdate }) => {
+        if (wideModeWithEitherOrientation) return;
+        if (Platform.OS === 'web') return;
 
-      if(fullscreenUpdate === VideoFullscreenUpdate.PLAYER_WILL_DISMISS) {
-        try {
-          videoRef.current.pauseAsync()
-        } catch(err) {  // eslint-disable-line @typescript-eslint/no-unused-vars
-          // ignore as it just means the state is already what I am setting it to be
-        }
-      }
-
-      if(Platform.OS === 'android') {
-
-        if(fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_PRESENT) {
-          ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
-        } else if(fullscreenUpdate === VideoFullscreenUpdate.PLAYER_WILL_DISMISS) {
-          ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP)
-        }
-
-      }
-    },
-    [ wideModeWithEitherOrientation ],
-  )
-
-  const onPlaybackStatusUpdate = useCallback(
-    ({ isPlaying, didJustFinish }) => {
-      (async () => {
-
-        if(!prevIsPlaying.current && isPlaying) {
-          currentPlaybackStartTime.current = Date.now()
-        } else if(!isPlaying && currentPlaybackStartTime.current) {
-          totalTimePlayed.current += Math.round((Date.now() - currentPlaybackStartTime.current) / 1000)
-          currentPlaybackStartTime.current = null
-        }
-
-        if(
-          !wideModeWithEitherOrientation
-          && Platform.OS !== 'web'
-        ) {
+        if (fullscreenUpdate === VideoFullscreenUpdate.PLAYER_WILL_DISMISS) {
           try {
-            if(!prevIsPlaying.current && isPlaying) {
-              await videoRef.current.presentFullscreenPlayer()
-            } else if(didJustFinish) {
-              await videoRef.current.dismissFullscreenPlayer()
-            }
-          } catch(err) {  // eslint-disable-line @typescript-eslint/no-unused-vars
+            videoRef.current.pauseAsync();
+          } catch {
             // ignore as it just means the state is already what I am setting it to be
           }
         }
 
-        prevIsPlaying.current = isPlaying
+        if (Platform.OS === 'android') {
+          if (fullscreenUpdate === VideoFullscreenUpdate.PLAYER_DID_PRESENT) {
+            ScreenOrientation.lockAsync(
+              ScreenOrientation.OrientationLock.LANDSCAPE,
+            );
+          } else if (
+            fullscreenUpdate === VideoFullscreenUpdate.PLAYER_WILL_DISMISS
+          ) {
+            ScreenOrientation.lockAsync(
+              ScreenOrientation.OrientationLock.PORTRAIT_UP,
+            );
+          }
+        }
+      },
+      [wideModeWithEitherOrientation],
+    );
 
-      })()
-    },
-    [ wideModeWithEitherOrientation ],
-  )
+    const onPlaybackStatusUpdate = useCallback(
+      ({ isPlaying, didJustFinish }) => {
+        (async () => {
+          if (!prevIsPlaying.current && isPlaying) {
+            currentPlaybackStartTime.current = Date.now();
+          } else if (!isPlaying && currentPlaybackStartTime.current) {
+            totalTimePlayed.current += Math.round(
+              (Date.now() - currentPlaybackStartTime.current) / 1000,
+            );
+            currentPlaybackStartTime.current = null;
+          }
 
-  useEffect(
-    () => (
-      () => {
-        if(logUsageEvent && totalTimePlayed.current) {
+          if (!wideModeWithEitherOrientation && Platform.OS !== 'web') {
+            try {
+              if (!prevIsPlaying.current && isPlaying) {
+                await videoRef.current.presentFullscreenPlayer();
+              } else if (didJustFinish) {
+                await videoRef.current.dismissFullscreenPlayer();
+              }
+            } catch {
+              // ignore as it just means the state is already what I am setting it to be
+            }
+          }
+
+          prevIsPlaying.current = isPlaying;
+        })();
+      },
+      [wideModeWithEitherOrientation],
+    );
+
+    useEffect(
+      () => () => {
+        if (logUsageEvent && totalTimePlayed.current) {
           logUsageEvent({
             toolUid,
             usageType: `Video playback`,
             'total playback time in seconds': totalTimePlayed.current,
-          })
+          });
         }
-      }
-    ),
-    [],
-  )
+      },
+      [],
+    );
 
-  videoLink = videoLink || ""
+    videoLink = videoLink || '';
 
-  // let iframeAttributes = false
-  let uri = ''
+    // let iframeAttributes = false
+    let uri = '';
 
-  const getSecondsFromTimeString = timeString => (
-    String(timeString || '')
-      .split(":")
-      .reverse()
-      .reduce(
-        (total, timeSegment, idx) => (
-          total + (parseInt(timeSegment || 0, 10) || 0) * [1, 60, 60*60, 60*60*24][idx]
-        ),
-        0
-      )
-  )
+    const getSecondsFromTimeString = (timeString) =>
+      String(timeString || '')
+        .split(':')
+        .reverse()
+        .reduce(
+          (total, timeSegment, idx) =>
+            total +
+            (parseInt(timeSegment || 0, 10) || 0) *
+              [1, 60, 60 * 60, 60 * 60 * 24][idx],
+          0,
+        );
 
-  let startSecs = getSecondsFromTimeString(startTime)
-  let endSecs = getSecondsFromTimeString(endTime)
+    let startSecs = getSecondsFromTimeString(startTime);
+    let endSecs = getSecondsFromTimeString(endTime);
 
-  const getVideoComponent = () => {
+    const getVideoComponent = () => {
+      if (videoLink.match(vimeoRegex)) {
+        //const vimeoIframeId = `vimeoiframe-${videoLink.replace(/"/g, '')}-${startTime}-${endTime}`
 
-    if(videoLink.match(vimeoRegex)) {
+        // if((startSecs || endSecs) && Platform.OS === 'web') {
 
-      //const vimeoIframeId = `vimeoiframe-${videoLink.replace(/"/g, '')}-${startTime}-${endTime}`
+        //   const setupStartEnd = () => {
+        //     try {
+        //       const player = new Vimeo.Player(document.getElementById(vimeoIframeId))
 
-      // if((startSecs || endSecs) && Platform.OS === 'web') {
+        //       if(startSecs) {
+        //         if(startSecs) player.setCurrentTime(startSecs)
+        //         startSecs = 0
+        //       }
 
-      //   const setupStartEnd = () => {
-      //     try {
-      //       const player = new Vimeo.Player(document.getElementById(vimeoIframeId))
+        //       if(endSecs) {
+        //         player.on("timeupdate", data => {
+        //             if(endSecs && data.seconds >= endSecs) {
+        //               player.pause()
+        //               endSecs = 0
+        //             }
+        //         })
+        //       }
+        //     } catch(e) {}
+        //   }
 
-      //       if(startSecs) {
-      //         if(startSecs) player.setCurrentTime(startSecs)
-      //         startSecs = 0
-      //       }
+        //   document.flipEditorSetupVimeoStartEndFuncs = [
+        //     ...(document.flipEditorSetupVimeoStartEndFuncs || []),
+        //     setupStartEnd,
+        //   ]
 
-      //       if(endSecs) {
-      //         player.on("timeupdate", data => {
-      //             if(endSecs && data.seconds >= endSecs) {
-      //               player.pause()
-      //               endSecs = 0
-      //             }
-      //         })
-      //       }
-      //     } catch(e) {}
-      //   }
+        //   document.flipEditorSetupVimeoStartEnd = () => {
+        //     if(typeof Vimeo === 'undefined') return
 
-      //   document.flipEditorSetupVimeoStartEndFuncs = [
-      //     ...(document.flipEditorSetupVimeoStartEndFuncs || []),
-      //     setupStartEnd,
-      //   ]
+        //     const func = document.flipEditorSetupVimeoStartEndFuncs.pop()
 
-      //   document.flipEditorSetupVimeoStartEnd = () => {
-      //     if(typeof Vimeo === 'undefined') return
+        //     if(func) {
+        //       func()
+        //       document.flipEditorSetupVimeoStartEnd()
+        //     }
+        //   }
 
-      //     const func = document.flipEditorSetupVimeoStartEndFuncs.pop()
+        //   if(!document.getElementById("flipeditor-vimeoscript")) {
+        //     const script = document.createElement('script')
+        //     script.id = 'flipeditor-vimeoscript'
+        //     script.type = 'text/javascript'
+        //     script.async = true
+        //     script.onload = document.flipEditorSetupVimeoStartEnd
+        //     script.src = 'https://player.vimeo.com/api/player.js'
+        //     document.getElementsByTagName('head')[0].appendChild(script)
+        //   } else {
+        //     setTimeout(document.flipEditorSetupVimeoStartEnd)  // this needs to get run after the insertion of the iframe, hence the timeout
+        //   }
 
-      //     if(func) {
-      //       func()
-      //       document.flipEditorSetupVimeoStartEnd()
-      //     }
-      //   }
-
-      //   if(!document.getElementById("flipeditor-vimeoscript")) {
-      //     const script = document.createElement('script')
-      //     script.id = 'flipeditor-vimeoscript'
-      //     script.type = 'text/javascript'
-      //     script.async = true
-      //     script.onload = document.flipEditorSetupVimeoStartEnd
-      //     script.src = 'https://player.vimeo.com/api/player.js'
-      //     document.getElementsByTagName('head')[0].appendChild(script)
-      //   } else {
-      //     setTimeout(document.flipEditorSetupVimeoStartEnd)  // this needs to get run after the insertion of the iframe, hence the timeout
-      //   }
-
-      // }
-
-      uri = videoLink.replace(
-        vimeoRegex,
-        `https://player.vimeo.com/video/$1`
-          + `?portrait=0`
-          + `&autoplay=0`
-          + (subtitlesOn ? `&texttrack=${getLocale() || `en`}` : ``)
-      )
-
-      return (
-        <WebView
-          containerStyle={styles.webViewContainer}
-          style={styles.webView}
-          source={{ uri }}
-          allowsFullscreenVideo={true}
-        />
-      )
-
-    } else {
-      let regex = youtubeRegex
-      let matches = videoLink.match(regex)
-
-      if(!matches) {
-        regex = shortYoutubeRegex
-        matches = videoLink.match(regex)
-      }
-
-      if(matches && matches[1]) {
+        // }
 
         uri = videoLink.replace(
-          regex,
-          `https://www.youtube.com/embed/$1`
-            + `?rel=0`
-            + `&modestbranding=1`
-            + (startSecs ? `&start=${startSecs}` : ``)
-            + (endSecs ? `&end=${endSecs}` : ``)
-            + (subtitlesOn ? `&cc_load_policy=${1}&cc_lang_pref=${getLocale() || `en`}` : ``)
-        )
+          vimeoRegex,
+          `https://player.vimeo.com/video/$1` +
+            `?portrait=0` +
+            `&autoplay=0` +
+            (subtitlesOn ? `&texttrack=${getLocale() || `en`}` : ``),
+        );
 
         return (
           <WebView
@@ -263,35 +235,62 @@ const VideoTool = React.memo(({
             style={styles.webView}
             source={{ uri }}
             allowsFullscreenVideo={true}
-            // allowsInlineMediaPlayback={true}
           />
-        )
-
+        );
       } else {
-        return (
-          <Video
-            ref={videoRef}
-            source={{ uri: videoLink }}
-            resizeMode={ResizeMode.CONTAIN}
-            useNativeControls
-            style={styles.webViewContainer}
-            videoStyle={Platform.OS === 'web' ? styles.video : null}
-            onFullscreenUpdate={onFullscreenUpdate}
-            onPlaybackStatusUpdate={onPlaybackStatusUpdate}
-          />
-        )
+        let regex = youtubeRegex;
+        let matches = videoLink.match(regex);
+
+        if (!matches) {
+          regex = shortYoutubeRegex;
+          matches = videoLink.match(regex);
+        }
+
+        if (matches && matches[1]) {
+          uri = videoLink.replace(
+            regex,
+            `https://www.youtube.com/embed/$1` +
+              `?rel=0` +
+              `&modestbranding=1` +
+              (startSecs ? `&start=${startSecs}` : ``) +
+              (endSecs ? `&end=${endSecs}` : ``) +
+              (subtitlesOn
+                ? `&cc_load_policy=${1}&cc_lang_pref=${getLocale() || `en`}`
+                : ``),
+          );
+
+          return (
+            <WebView
+              containerStyle={styles.webViewContainer}
+              style={styles.webView}
+              source={{ uri }}
+              allowsFullscreenVideo={true}
+              // allowsInlineMediaPlayback={true}
+            />
+          );
+        } else {
+          return (
+            <Video
+              ref={videoRef}
+              source={{ uri: videoLink }}
+              resizeMode={ResizeMode.CONTAIN}
+              useNativeControls
+              style={styles.webViewContainer}
+              videoStyle={Platform.OS === 'web' ? styles.video : null}
+              onFullscreenUpdate={onFullscreenUpdate}
+              onPlaybackStatusUpdate={onPlaybackStatusUpdate}
+            />
+          );
+        }
       }
-    }
+    };
 
-  }
-
-  return (
-    <View style={containerStyle || styles.container}>
-      <View style={styles.videoSizer}>
-        {getVideoComponent()}
+    return (
+      <View style={containerStyle || styles.container}>
+        <View style={styles.videoSizer}>{getVideoComponent()}</View>
       </View>
-    </View>
-  )
-})
+    );
+  },
+);
 
-export default VideoTool
+export default VideoTool;

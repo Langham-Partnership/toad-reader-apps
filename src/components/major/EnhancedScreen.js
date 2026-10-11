@@ -1,21 +1,27 @@
-import React, { useState, useCallback } from "react"
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from "react-native"
-import { ViewPager } from "@ui-kitten/components"
-import { i18n } from "inline-i18n"
+import React, { useState, useCallback } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
+import { ViewPager } from '@ui-kitten/components';
+import { i18n } from 'inline-i18n';
 
-import { getToolbarHeight } from '../../utils/toolbox'
-import useWideMode from "../../hooks/useWideMode"
-import useInstanceValue from "../../hooks/useInstanceValue"
+import { getToolbarHeight } from '../../utils/toolbox';
+import useWideMode from '../../hooks/useWideMode';
+import useInstanceValue from '../../hooks/useInstanceValue';
 
-import StatusAndActions from "./StatusAndActions"
-import HeaderIcon from "../basic/HeaderIcon"
-import SaveStateHeaderIcon from "../basic/SaveStateHeaderIcon"
+import StatusAndActions from './StatusAndActions';
+import HeaderIcon from '../basic/HeaderIcon';
+import SaveStateHeaderIcon from '../basic/SaveStateHeaderIcon';
 
 const container = {
   ...StyleSheet.absoluteFillObject,
   backgroundColor: 'white',
   zIndex: 5,
-}
+};
 
 const tabTitle = {
   lineHeight: 30,
@@ -23,7 +29,7 @@ const tabTitle = {
   marginRight: 20,
   borderBottomWidth: 3,
   borderBottomColor: 'transparent',
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -111,128 +117,142 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     fontSize: 17,
   },
-})
+});
 
-const EnhancedScreen = React.memo(({
-  bookId,
-  inEditMode,
-  closeToolAndExitReading,
-  heading,
-  tabs,
-  initialSelectedTabIndex,
-  viewingPreview,
-  setViewingPreview,
-}) => {
+const EnhancedScreen = React.memo(
+  ({
+    bookId,
+    inEditMode,
+    closeToolAndExitReading,
+    heading,
+    tabs,
+    initialSelectedTabIndex,
+    viewingPreview,
+    setViewingPreview,
+  }) => {
+    const [selectedTabIndex, setSelectedTabIndex] = useState(
+      initialSelectedTabIndex,
+    );
+    const [previewSelectedTabIndex, setPreviewSelectedTabIndex] = useState();
 
-  const [ selectedTabIndex, setSelectedTabIndex ] = useState(initialSelectedTabIndex)
-  const [ previewSelectedTabIndex, setPreviewSelectedTabIndex ] = useState()
+    const onExitPreview = useCallback(() => setViewingPreview(false), []);
 
-  const onExitPreview = useCallback(() => setViewingPreview(false), [])
+    const wideMode = useWideMode();
 
-  const wideMode = useWideMode()
+    if (tabs.length === 0 && !viewingPreview) return null;
 
-  if(tabs.length === 0 && !viewingPreview) return null
+    let tabIndex = viewingPreview ? previewSelectedTabIndex : selectedTabIndex;
+    if (tabIndex !== undefined && tabIndex > tabs.length - 1) {
+      tabIndex = undefined;
+    }
+    const setTabIndex = viewingPreview
+      ? setPreviewSelectedTabIndex
+      : setSelectedTabIndex;
+    const resetTabIndex = useCallback(() => setTabIndex(), [setTabIndex]);
+    const getTabIndex = useInstanceValue(tabIndex);
+    const shouldLoadComponent = useCallback(
+      (index) => index === (getTabIndex() || 0),
+      [],
+    );
 
-  let tabIndex = viewingPreview ? previewSelectedTabIndex : selectedTabIndex
-  if(tabIndex !== undefined && tabIndex > tabs.length - 1) {
-    tabIndex = undefined
-  }
-  const setTabIndex = viewingPreview ? setPreviewSelectedTabIndex : setSelectedTabIndex
-  const resetTabIndex = useCallback(() => setTabIndex(), [ setTabIndex ])
-  const getTabIndex = useInstanceValue(tabIndex)
-  const shouldLoadComponent = useCallback(index => index === (getTabIndex() || 0), [])
-
-  return (
-    <View style={wideMode ? styles.constainerWideMode : styles.container}>
-      <View style={wideMode ? styles.topSectionWideMode : styles.topSection}>
-        <View style={wideMode ? styles.headingLineWideMode : styles.headingLine}>
-          {!wideMode &&
-            <HeaderIcon
-              iconName="arrow-back"
-              onPress={tabIndex === undefined ? closeToolAndExitReading : resetTabIndex}
-              style={styles.back}
-            />
-          }
-          <Text style={wideMode ? styles.headingWideMode : styles.heading}>
-            {(wideMode || tabIndex === undefined) ? heading : tabs[tabIndex].title}
-          </Text>
-          {!wideMode && inEditMode && tabIndex !== undefined && <SaveStateHeaderIcon />}
-        </View>
-        {(inEditMode && !viewingPreview && (wideMode || tabIndex !== undefined)) &&
-          <StatusAndActions
-            bookId={bookId}
-            setViewingPreview={setViewingPreview}
-          />
-        }
-        {inEditMode && viewingPreview &&
-          <View style={wideMode ? styles.exitPreviewContainerWideMode : styles.exitPreviewContainer}>
-            <TouchableOpacity onPress={onExitPreview}>
-              <Text style={styles.exitPreview}>
-                {i18n("Exit preview", "", "enhanced")}
-              </Text>
-            </TouchableOpacity>
+    return (
+      <View style={wideMode ? styles.constainerWideMode : styles.container}>
+        <View style={wideMode ? styles.topSectionWideMode : styles.topSection}>
+          <View
+            style={wideMode ? styles.headingLineWideMode : styles.headingLine}
+          >
+            {!wideMode && (
+              <HeaderIcon
+                iconName="arrow-back"
+                onPress={
+                  tabIndex === undefined
+                    ? closeToolAndExitReading
+                    : resetTabIndex
+                }
+                style={styles.back}
+              />
+            )}
+            <Text style={wideMode ? styles.headingWideMode : styles.heading}>
+              {wideMode || tabIndex === undefined
+                ? heading
+                : tabs[tabIndex].title}
+            </Text>
+            {!wideMode && inEditMode && tabIndex !== undefined && (
+              <SaveStateHeaderIcon />
+            )}
           </View>
-        }
-      </View>
-      {tabs.length > 0 &&
-        <>
-          {(wideMode || tabIndex === undefined) && 
-            <ScrollView
-              key={viewingPreview ? `preview-tabs` : `draft-tabs`}
-              style={wideMode ? styles.tabs : styles.menu}
-              horizontal={wideMode}
+          {inEditMode &&
+            !viewingPreview &&
+            (wideMode || tabIndex !== undefined) && (
+              <StatusAndActions
+                bookId={bookId}
+                setViewingPreview={setViewingPreview}
+              />
+            )}
+          {inEditMode && viewingPreview && (
+            <View
+              style={
+                wideMode
+                  ? styles.exitPreviewContainerWideMode
+                  : styles.exitPreviewContainer
+              }
             >
-              {tabs.map(({ title }, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  onPress={() => setTabIndex(idx)}
-                >
-                  <Text
-                    style={
-                      wideMode
-                        ? (
-                          idx === (tabIndex || 0)
+              <TouchableOpacity onPress={onExitPreview}>
+                <Text style={styles.exitPreview}>
+                  {i18n('Exit preview', '', 'enhanced')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+        {tabs.length > 0 && (
+          <>
+            {(wideMode || tabIndex === undefined) && (
+              <ScrollView
+                key={viewingPreview ? `preview-tabs` : `draft-tabs`}
+                style={wideMode ? styles.tabs : styles.menu}
+                horizontal={wideMode}
+              >
+                {tabs.map(({ title }, idx) => (
+                  <TouchableOpacity key={idx} onPress={() => setTabIndex(idx)}>
+                    <Text
+                      style={
+                        wideMode
+                          ? idx === (tabIndex || 0)
                             ? styles.selectedTabTitle
                             : styles.tabTitle
-                        )
-                        : styles.menuItem
-                    }
-                  >
-                    {title}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          }
-          {wideMode &&
-            <ViewPager
-              key={viewingPreview ? `preview-content` : `draft-content`}
-              style={styles.tabsContent}
-              selectedIndex={tabIndex || 0}
-              onSelect={setTabIndex}
-              shouldLoadComponent={shouldLoadComponent}
-            >
-              {tabs.map(({ content }, idx) => (
-                <View
-                  key={idx}
-                  style={styles.tabContent}
-                >
-                  {content}
-                </View>
-              ))}
-            </ViewPager>
-          }
-          {!wideMode && tabIndex !== undefined &&
-            <View
-              style={styles.tabContent}
-            >
-              {tabs[tabIndex].content}
-            </View>
-          }
-        </>
-      }
-    </View>
-  )
-})
+                          : styles.menuItem
+                      }
+                    >
+                      {title}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+            {wideMode && (
+              <ViewPager
+                key={viewingPreview ? `preview-content` : `draft-content`}
+                style={styles.tabsContent}
+                selectedIndex={tabIndex || 0}
+                onSelect={setTabIndex}
+                shouldLoadComponent={shouldLoadComponent}
+              >
+                {tabs.map(({ content }, idx) => (
+                  <View key={idx} style={styles.tabContent}>
+                    {content}
+                  </View>
+                ))}
+              </ViewPager>
+            )}
+            {!wideMode && tabIndex !== undefined && (
+              <View style={styles.tabContent}>{tabs[tabIndex].content}</View>
+            )}
+          </>
+        )}
+      </View>
+    );
+  },
+);
 
-export default EnhancedScreen
+export default EnhancedScreen;

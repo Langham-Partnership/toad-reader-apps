@@ -1,22 +1,22 @@
-import React, { useCallback } from "react"
-import { StyleSheet, View, Text } from "react-native"
-import { bindActionCreators } from "redux"
-import { connect } from "react-redux"
-import { i18n } from "inline-i18n"
+import React, { useCallback } from 'react';
+import { StyleSheet, View, Text } from 'react-native';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+import { i18n } from 'inline-i18n';
 
-import { getToolbarHeight } from '../../utils/toolbox'
-import useWideMode from "../../hooks/useWideMode"
-import useRouterState from "../../hooks/useRouterState"
-import { setSelectedToolUid } from "../../redux/actions"
+import { getToolbarHeight } from '../../utils/toolbox';
+import useWideMode from '../../hooks/useWideMode';
+import useRouterState from '../../hooks/useRouterState';
+import { setSelectedToolUid } from '../../redux/actions';
 
-import Highlights from "./Highlights"
-import HeaderIcon from "../basic/HeaderIcon"
+import Highlights from './Highlights';
+import HeaderIcon from '../basic/HeaderIcon';
 
 const container = {
   ...StyleSheet.absoluteFillObject,
   backgroundColor: 'white',
   zIndex: 7,
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -68,65 +68,73 @@ const styles = StyleSheet.create({
     top: -20,
     right: -10,
   },
-})
+});
 
-const HighlightsWrapper = React.memo(({
-  bookId,
-  goTo,
-  closeToolAndExitReading,
+const HighlightsWrapper = React.memo(
+  ({
+    bookId,
+    goTo,
+    closeToolAndExitReading,
 
-  setSelectedToolUid,
-}) => {
+    setSelectedToolUid,
+  }) => {
+    const wideMode = useWideMode();
+    const { getRouterState, historyGoBack, historyReplace } = useRouterState();
 
-  const wideMode = useWideMode()
-  const { getRouterState, historyGoBack, historyReplace } = useRouterState()
+    const xOutOfHighlights = useCallback(() => {
+      setSelectedToolUid({
+        bookId,
+        getRouterState,
+        historyGoBack,
+        historyReplace,
+      });
+    }, [bookId]);
 
-  const xOutOfHighlights = useCallback(
-    () => {
-      setSelectedToolUid({ bookId, getRouterState, historyGoBack, historyReplace })
-    },
-    [ bookId ],
-  )
-
-  return (
-    <View style={wideMode ? styles.constainerWideMode : styles.container}>
-      <View style={wideMode ? styles.topSectionWideMode : styles.topSection}>
-        <View style={wideMode ? styles.headingLineWideMode : styles.headingLine}>
-          {!wideMode &&
-            <HeaderIcon
-              iconName="arrow-back"
-              onPress={closeToolAndExitReading}
-              style={styles.back}
-            />
-          }
-          <Text style={wideMode ? styles.headingWideMode : styles.heading}>
-            {i18n("My highlights and notes")}
-          </Text>
-          {wideMode &&
-            <View style={styles.closeContainer}>
+    return (
+      <View style={wideMode ? styles.constainerWideMode : styles.container}>
+        <View style={wideMode ? styles.topSectionWideMode : styles.topSection}>
+          <View
+            style={wideMode ? styles.headingLineWideMode : styles.headingLine}
+          >
+            {!wideMode && (
               <HeaderIcon
-                iconName="close"
-                onPress={xOutOfHighlights}
-                uiStatus="faded"
-                style={styles.close}
+                iconName="arrow-back"
+                onPress={closeToolAndExitReading}
+                style={styles.back}
               />
-            </View>
-          }
+            )}
+            <Text style={wideMode ? styles.headingWideMode : styles.heading}>
+              {i18n('My highlights and notes')}
+            </Text>
+            {wideMode && (
+              <View style={styles.closeContainer}>
+                <HeaderIcon
+                  iconName="close"
+                  onPress={xOutOfHighlights}
+                  uiStatus="faded"
+                  style={styles.close}
+                />
+              </View>
+            )}
+          </View>
         </View>
+        <Highlights bookId={bookId} goTo={goTo} />
       </View>
-      <Highlights
-        bookId={bookId}
-        goTo={goTo}
-      />
-    </View>
-  )
-})
+    );
+  },
+);
 
-const mapStateToProps = () => ({
-})
+const mapStateToProps = () => ({});
 
-const matchDispatchToProps = (dispatch) => bindActionCreators({
-  setSelectedToolUid,
-}, dispatch)
+const matchDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      setSelectedToolUid,
+    },
+    dispatch,
+  );
 
-export default connect(mapStateToProps, matchDispatchToProps)(HighlightsWrapper)
+export default connect(
+  mapStateToProps,
+  matchDispatchToProps,
+)(HighlightsWrapper);

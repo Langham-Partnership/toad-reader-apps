@@ -1,60 +1,64 @@
-import React, { useRef, useCallback, useMemo, useState, useEffect } from "react"
-import { StyleSheet, TouchableOpacity, View, Platform } from "react-native"
-import Constants from 'expo-constants'
-import { i18n } from "inline-i18n"
-import { useLayout } from '@react-native-community/hooks'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import React, {
+  useRef,
+  useCallback,
+  useMemo,
+  useState,
+  useEffect,
+} from 'react';
+import { StyleSheet, TouchableOpacity, View, Platform } from 'react-native';
+import Constants from 'expo-constants';
+import { i18n } from 'inline-i18n';
+import { useLayout } from '@react-native-community/hooks';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const {
-  SKETCH_COLOR_OPTIONS = 20,
-} = Constants.expoConfig.extra
+const { SKETCH_COLOR_OPTIONS = 20 } = Constants.expoConfig.extra;
 
-import getSketchCode from "../../../getSketchCode"
-import { postMessage } from "../../utils/postMessage"
-import useNonBlurringOnPress from "../../hooks/useNonBlurringOnPress"
+import getSketchCode from '../../../getSketchCode';
+import { postMessage } from '../../utils/postMessage';
+import useNonBlurringOnPress from '../../hooks/useNonBlurringOnPress';
 
-import WebView from "../major/WebView"
-import Button from "./Button"
-import ColorSwitcher, { defaultColorOptions } from "./ColorSwitcher"
-import Icon from "./Icon"
+import WebView from '../major/WebView';
+import Button from './Button';
+import ColorSwitcher, { defaultColorOptions } from './ColorSwitcher';
+import Icon from './Icon';
 
-const colorOptions = SKETCH_COLOR_OPTIONS || defaultColorOptions
+const colorOptions = SKETCH_COLOR_OPTIONS || defaultColorOptions;
 
-const HEIGHT_OF_CONTROLS = 60
+const HEIGHT_OF_CONTROLS = 60;
 
 const UTENSILS = [
   {
     icon: {
-      name: "pencil",
-      pack: "ion",
+      name: 'pencil',
+      pack: 'ion',
     },
     size: 1,
     transparency: `FF`,
   },
   {
     icon: {
-      name: "pen",
-      pack: "materialCommunity",
+      name: 'pen',
+      pack: 'materialCommunity',
     },
     size: 4,
     transparency: `AA`,
   },
   {
     icon: {
-      name: "marker",
-      pack: "materialCommunity",
+      name: 'marker',
+      pack: 'materialCommunity',
     },
     size: 20,
     transparency: `66`,
   },
-]
+];
 
 const side = {
   width: 108,
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-}
+  display: 'flex',
+  flexDirection: 'row',
+  alignItems: 'center',
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -75,19 +79,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 15,
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   side1: {
     ...side,
-    justifyContent: "flex-end",
+    justifyContent: 'flex-end',
     marginLeft: 'auto',
   },
   side2: {
     ...side,
-    justifyContent: "flex-start",
+    justifyContent: 'flex-start',
     marginRight: 'auto',
     marginLeft: -15,
     width: side.width + 15,
@@ -104,7 +108,7 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   disabled: {
-    opacity: .2,
+    opacity: 0.2,
   },
   spacer: {
     width: 1,
@@ -112,78 +116,90 @@ const styles = StyleSheet.create({
     backgroundColor: `rgb(200, 200, 200)`,
     marginHorizontal: 30,
   },
-})
+});
 
-const SketchPad = React.memo(({
-  sketch,
-  updateSketchInEdit,
-  mode=`edit`,  // edit OR view
-  onDone,
-  onDataURLReady,
-  doneButtonLabel,
-  backgroundImage,
-  style,
-}) => {
+const SketchPad = React.memo(
+  ({
+    sketch,
+    updateSketchInEdit,
+    mode = `edit`, // edit OR view
+    onDone,
+    onDataURLReady,
+    doneButtonLabel,
+    backgroundImage,
+    style,
+  }) => {
+    const webView = useRef();
+    let { onLayout, width, height } = useLayout();
+    const [wasJustCleared, setWasJustCleared] = useState(false);
+    const safeAreaInsets = useSafeAreaInsets();
 
-  const webView = useRef()
-  let { onLayout, width, height } = useLayout()
-  const [ wasJustCleared, setWasJustCleared ] = useState(false)
-  const safeAreaInsets = useSafeAreaInsets()
+    let {
+      sketchData,
+      utensil = 1,
+      color = 1,
+      canvasWidth,
+      canvasHeight,
+      bgScale,
+    } = sketch || {};
+    color =
+      Math.max(1, Math.min(parseInt(color, 10), colorOptions.length)) || 1;
+    utensil =
+      Math.max(1, Math.min(parseInt(utensil, 10), UTENSILS.length)) || 1;
+    const scale = useRef();
+    const scaleAdjustment = useRef(1);
+    const prevBgScale = useRef();
+    const newSketchInfo = useRef({ canvasWidth, canvasHeight });
 
-  let { sketchData, utensil=1, color=1, canvasWidth, canvasHeight, bgScale } = sketch || {}
-  color = Math.max(1, Math.min(parseInt(color, 10), colorOptions.length)) || 1
-  utensil = Math.max(1, Math.min(parseInt(utensil, 10), UTENSILS.length)) || 1
-  const scale = useRef()
-  const scaleAdjustment = useRef(1)
-  const prevBgScale = useRef()
-  const newSketchInfo = useRef({ canvasWidth, canvasHeight })
+    useMemo(() => {
+      if (!width) return;
+      if (scale.current) return;
 
-  useMemo(
-    () => {
-      if(!width) return
-      if(scale.current) return
-
-      if(backgroundImage) {
-        height -= HEIGHT_OF_CONTROLS
+      if (backgroundImage) {
+        height -= HEIGHT_OF_CONTROLS;
       }
 
-      let sketchObj = { objects: [] }
+      let sketchObj = { objects: [] };
       try {
         sketchObj = JSON.parse(sketchData) || sketchObj;
-      } catch (err) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      } catch {
         /* empty */
       }
 
-      if(!canvasWidth || sketchObj.objects.length === 0) {
-        scale.current = 1
+      if (!canvasWidth || sketchObj.objects.length === 0) {
+        scale.current = 1;
         newSketchInfo.current = {
           canvasWidth: width,
           canvasHeight: height,
-        }
-
+        };
       } else {
         // set scale based on bigger difference (w vs h)
-        const horizontalScale = width / canvasWidth
-        const verticalScale = height / canvasHeight
-        scale.current = Math.min(horizontalScale, verticalScale)
-        const leftAdjustment = scale.current === verticalScale ? (((width / scale.current) - canvasWidth) / 2) : 0
-        const topAdjustment = scale.current !== verticalScale ? (((height / scale.current) - canvasHeight) / 2) : 0
-        sketchObj.objects.forEach(obj => {
-          obj.left += leftAdjustment
-          obj.top += topAdjustment
-        })
-        if(scale.current === verticalScale) {
+        const horizontalScale = width / canvasWidth;
+        const verticalScale = height / canvasHeight;
+        scale.current = Math.min(horizontalScale, verticalScale);
+        const leftAdjustment =
+          scale.current === verticalScale
+            ? (width / scale.current - canvasWidth) / 2
+            : 0;
+        const topAdjustment =
+          scale.current !== verticalScale
+            ? (height / scale.current - canvasHeight) / 2
+            : 0;
+        sketchObj.objects.forEach((obj) => {
+          obj.left += leftAdjustment;
+          obj.top += topAdjustment;
+        });
+        if (scale.current === verticalScale) {
           newSketchInfo.current = {
-            canvasWidth: canvasWidth + leftAdjustment * 2
-          }
+            canvasWidth: canvasWidth + leftAdjustment * 2,
+          };
         } else {
           newSketchInfo.current = {
-            canvasHeight: canvasHeight + topAdjustment * 2
-          }
+            canvasHeight: canvasHeight + topAdjustment * 2,
+          };
         }
-        sketchData = JSON.stringify(sketchObj)
-        prevBgScale.current = bgScale
-
+        sketchData = JSON.stringify(sketchObj);
+        prevBgScale.current = bgScale;
       }
 
       // figure out what further device-specific scale needs to be
@@ -191,254 +207,231 @@ const SketchPad = React.memo(({
         android: 2,
         ios: 1,
         web: 1,
-      }[Platform.OS]
+      }[Platform.OS];
 
-      if(scale.current < minScale) {
-        scaleAdjustment.current = scale.current / minScale
-        scale.current = minScale
+      if (scale.current < minScale) {
+        scaleAdjustment.current = scale.current / minScale;
+        scale.current = minScale;
 
-        sketchObj.objects.forEach(obj => {
-          obj.strokeWidth *= scaleAdjustment.current
-          obj.left *= scaleAdjustment.current
-          obj.top *= scaleAdjustment.current
-          obj.width *= scaleAdjustment.current
-          obj.height *= scaleAdjustment.current
-          obj.path = obj.path.map(step => step.map(num => typeof num === 'number' ? num * scaleAdjustment.current : num))
-        })
-        sketchData = JSON.stringify(sketchObj)
-        prevBgScale.current = (prevBgScale.current || 1) * scaleAdjustment.current
+        sketchObj.objects.forEach((obj) => {
+          obj.strokeWidth *= scaleAdjustment.current;
+          obj.left *= scaleAdjustment.current;
+          obj.top *= scaleAdjustment.current;
+          obj.width *= scaleAdjustment.current;
+          obj.height *= scaleAdjustment.current;
+          obj.path = obj.path.map((step) =>
+            step.map((num) =>
+              typeof num === 'number' ? num * scaleAdjustment.current : num,
+            ),
+          );
+        });
+        sketchData = JSON.stringify(sketchObj);
+        prevBgScale.current =
+          (prevBgScale.current || 1) * scaleAdjustment.current;
       }
+    }, [!width]);
 
-    },
-    [ !width ],
-  )
-
-  const hasUndo = useMemo(
-    () => {
+    const hasUndo = useMemo(() => {
       try {
-        const sketchObj = JSON.parse(sketchData)
-        return sketchObj.objects.length > 0
-      } catch (err) {  // eslint-disable-line @typescript-eslint/no-unused-vars
+        const sketchObj = JSON.parse(sketchData);
+        return sketchObj.objects.length > 0;
+      } catch {
         /* empty */
       }
-    },
-    [ sketchData ],
-  )
+    }, [sketchData]);
 
-  const goUpdateSketchInEdit = useCallback(
-    update => {
-      updateSketchInEdit({
-        sketchData,
-        utensil,
-        color,
-        canvasWidth,
-        canvasHeight,
-        bgScale,
-        ...update,
-      })
-    },
-    [ sketchData, utensil, color, canvasWidth, canvasHeight, bgScale ],
-  )
+    const goUpdateSketchInEdit = useCallback(
+      (update) => {
+        updateSketchInEdit({
+          sketchData,
+          utensil,
+          color,
+          canvasWidth,
+          canvasHeight,
+          bgScale,
+          ...update,
+        });
+      },
+      [sketchData, utensil, color, canvasWidth, canvasHeight, bgScale],
+    );
 
-  const onMessageEvent = useCallback(
-    async event => {
-      let { identifier, sketchData, bgScale, dataURL } = JSON.parse(event.nativeEvent.data)
-      switch(identifier) {
-        case "loaded": {
-          webView.current.loaded = true
-          break
-        }
-        case "dataURL": {
-          onDataURLReady(dataURL)
-          break
-        }
-        case "save": {
-          if(scaleAdjustment.current !== 1) {
-            const sketchObj = JSON.parse(sketchData) || { objects: [] }
-            sketchObj.objects.forEach(obj => {
-              obj.strokeWidth /= scaleAdjustment.current
-              obj.left /= scaleAdjustment.current
-              obj.top /= scaleAdjustment.current
-              obj.width /= scaleAdjustment.current
-              obj.height /= scaleAdjustment.current
-              obj.path = obj.path.map(step => step.map(num => typeof num === 'number' ? num / scaleAdjustment.current : num))
-            })
-            sketchData = JSON.stringify(sketchObj)
-            bgScale /= scaleAdjustment.current
+    const onMessageEvent = useCallback(
+      async (event) => {
+        let { identifier, sketchData, bgScale, dataURL } = JSON.parse(
+          event.nativeEvent.data,
+        );
+        switch (identifier) {
+          case 'loaded': {
+            webView.current.loaded = true;
+            break;
           }
+          case 'dataURL': {
+            onDataURLReady(dataURL);
+            break;
+          }
+          case 'save': {
+            if (scaleAdjustment.current !== 1) {
+              const sketchObj = JSON.parse(sketchData) || { objects: [] };
+              sketchObj.objects.forEach((obj) => {
+                obj.strokeWidth /= scaleAdjustment.current;
+                obj.left /= scaleAdjustment.current;
+                obj.top /= scaleAdjustment.current;
+                obj.width /= scaleAdjustment.current;
+                obj.height /= scaleAdjustment.current;
+                obj.path = obj.path.map((step) =>
+                  step.map((num) =>
+                    typeof num === 'number'
+                      ? num / scaleAdjustment.current
+                      : num,
+                  ),
+                );
+              });
+              sketchData = JSON.stringify(sketchObj);
+              bgScale /= scaleAdjustment.current;
+            }
 
-          goUpdateSketchInEdit({
-            sketchData,
-            bgScale,
-            ...newSketchInfo.current,
-          })
-          break
+            goUpdateSketchInEdit({
+              sketchData,
+              bgScale,
+              ...newSketchInfo.current,
+            });
+            break;
+          }
         }
-      }
-    },
-    [ goUpdateSketchInEdit ],
-  )
+      },
+      [goUpdateSketchInEdit],
+    );
 
-  const html = useMemo(() => getSketchCode({ sketchData, scale: scale.current, scaleAdjustment: scaleAdjustment.current, prevBgScale: prevBgScale.current, mode, backgroundImage }), [ scale.current ])
+    const html = useMemo(
+      () =>
+        getSketchCode({
+          sketchData,
+          scale: scale.current,
+          scaleAdjustment: scaleAdjustment.current,
+          prevBgScale: prevBgScale.current,
+          mode,
+          backgroundImage,
+        }),
+      [scale.current],
+    );
 
-  const clearOnPressProps = useNonBlurringOnPress(
-    () => {
-      if(!hasUndo) return
-      setWasJustCleared(true)
-      postMessage(webView.current, 'clear')
-    },
-    [ hasUndo, sketchData, setWasJustCleared ],
-  )
+    const clearOnPressProps = useNonBlurringOnPress(() => {
+      if (!hasUndo) return;
+      setWasJustCleared(true);
+      postMessage(webView.current, 'clear');
+    }, [hasUndo, sketchData, setWasJustCleared]);
 
-  const undoOnPressProps = useNonBlurringOnPress(
-    () => {
-      postMessage(webView.current, 'undo')
-      setWasJustCleared(false)
-    },
-    [ hasUndo, setWasJustCleared ],
-  )
+    const undoOnPressProps = useNonBlurringOnPress(() => {
+      postMessage(webView.current, 'undo');
+      setWasJustCleared(false);
+    }, [hasUndo, setWasJustCleared]);
 
-  const switchUtensilOnPressProps = useNonBlurringOnPress(
-    () => goUpdateSketchInEdit({ utensil: (utensil % UTENSILS.length) + 1 }),
-    [ goUpdateSketchInEdit, utensil ],
-  )
+    const switchUtensilOnPressProps = useNonBlurringOnPress(
+      () => goUpdateSketchInEdit({ utensil: (utensil % UTENSILS.length) + 1 }),
+      [goUpdateSketchInEdit, utensil],
+    );
 
-  const updateColor = useCallback(
-    color => goUpdateSketchInEdit({ color }),
-    [ goUpdateSketchInEdit ],
-  )
+    const updateColor = useCallback(
+      (color) => goUpdateSketchInEdit({ color }),
+      [goUpdateSketchInEdit],
+    );
 
-  const setColorAndUtensil = useCallback(
-    () => {
-      const { size, transparency } = UTENSILS[utensil - 1]
-      postMessage(
-        webView.current,
-        'set',
-        {
-          color: `${colorOptions[color - 1]}${transparency}`,
-          size,
-        },
-      )
-    },
-    [ color, utensil ],
-  )
+    const setColorAndUtensil = useCallback(() => {
+      const { size, transparency } = UTENSILS[utensil - 1];
+      postMessage(webView.current, 'set', {
+        color: `${colorOptions[color - 1]}${transparency}`,
+        size,
+      });
+    }, [color, utensil]);
 
-  useEffect(setColorAndUtensil, [ color, utensil ])
+    useEffect(setColorAndUtensil, [color, utensil]);
 
-  const undoDisabled = !hasUndo && !wasJustCleared
+    const undoDisabled = !hasUndo && !wasJustCleared;
 
-  return (
-    <View
-      style={[
-        styles.container,
-        style,
-        {
-          marginBottom: safeAreaInsets.bottom,
-        },
-      ]}
-      onLayout={onLayout}
-    >
+    return (
+      <View
+        style={[
+          styles.container,
+          style,
+          {
+            marginBottom: safeAreaInsets.bottom,
+          },
+        ]}
+        onLayout={onLayout}
+      >
+        {!!scale.current && (
+          <WebView
+            style={[
+              styles.sketchCanvasContainer,
+              backgroundImage ? styles.sketchCanvasContainerBottomSpace : null,
+            ]}
+            source={{ html }}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+            onMessage={onMessageEvent}
+            // onError={onError}
+            onLoad={setColorAndUtensil}
+            forwardRef={webView}
+            onStartShouldSetResponderCapture={() => true}
+            onResponderTerminationRequest={() => false}
+            // The rest of the props are ignored when on web platform
+            originWhitelist={['*']}
+            mixedContentMode="always"
+            bounces={false}
+            injectedJavaScript={`window.isReactNativeWebView = true;`}
+          />
+        )}
 
-      {!!scale.current &&
-        <WebView
-          style={[
-            styles.sketchCanvasContainer,
-            backgroundImage ? styles.sketchCanvasContainerBottomSpace : null,
-          ]}
-          source={{ html }}
-          showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
-          onMessage={onMessageEvent}
-          // onError={onError}
-          onLoad={setColorAndUtensil}
-          forwardRef={webView}
-          onStartShouldSetResponderCapture={() => true}
-          onResponderTerminationRequest={() => false}
+        <View style={styles.buttons}>
+          {mode === `edit` && (
+            <View style={styles.side1}>
+              <TouchableOpacity {...clearOnPressProps} disabled={!hasUndo}>
+                <Icon
+                  name="trash"
+                  style={[styles.clear, !hasUndo ? styles.disabled : null]}
+                />
+              </TouchableOpacity>
 
-          // The rest of the props are ignored when on web platform
-          originWhitelist={['*']}
-          mixedContentMode="always"
-          bounces={false}
-          injectedJavaScript={`window.isReactNativeWebView = true;`}
-        />
-      }
+              <TouchableOpacity {...undoOnPressProps} disabled={undoDisabled}>
+                <Icon
+                  name="undo"
+                  pack="material"
+                  style={[styles.undo, undoDisabled ? styles.disabled : null]}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
 
-      <View style={styles.buttons}>
-
-        {mode === `edit` &&
-          <View style={styles.side1}>
-
-            <TouchableOpacity
-              {...clearOnPressProps}
-              disabled={!hasUndo}
+          {!!onDone && (
+            <Button
+              style={styles.button}
+              onPress={onDone}
+              size="small"
+              status="basic"
             >
-              <Icon
-                name="trash"
-                style={[
-                  styles.clear,
-                  !hasUndo ? styles.disabled : null,
-                ]}
+              {doneButtonLabel || i18n('Done')}
+            </Button>
+          )}
+
+          {!onDone && <View style={styles.spacer} />}
+
+          {mode === `edit` && (
+            <View style={styles.side2}>
+              <ColorSwitcher
+                color={color}
+                colorOptions={colorOptions}
+                update={updateColor}
               />
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              {...undoOnPressProps}
-              disabled={undoDisabled}
-            >
-              <Icon
-                name="undo"
-                pack="material"
-                style={[
-                  styles.undo,
-                  undoDisabled ? styles.disabled : null,
-                ]}
-              />
-            </TouchableOpacity>
-
-          </View>
-        }
-
-        {!!onDone &&
-          <Button
-            style={styles.button}
-            onPress={onDone}
-            size="small"
-            status="basic"
-          >
-            {doneButtonLabel || i18n("Done")}
-          </Button>
-        }
-
-        {!onDone &&
-          <View style={styles.spacer} />
-        }
-
-        {mode === `edit` &&
-          <View style={styles.side2}>
-
-            <ColorSwitcher
-              color={color}
-              colorOptions={colorOptions}
-              update={updateColor}
-            />
-
-            <TouchableOpacity
-              {...switchUtensilOnPressProps}
-            >
-              <Icon
-                style={styles.utensil}
-                {...UTENSILS[utensil - 1].icon}
-              />
-            </TouchableOpacity>
-
-          </View>
-        }
-
+              <TouchableOpacity {...switchUtensilOnPressProps}>
+                <Icon style={styles.utensil} {...UTENSILS[utensil - 1].icon} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
+    );
+  },
+);
 
-
-    </View>
-  )
-})
-
-export default SketchPad
+export default SketchPad;

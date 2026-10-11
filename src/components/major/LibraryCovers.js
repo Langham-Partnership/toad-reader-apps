@@ -1,21 +1,21 @@
-import { useMemo, useRef, useCallback } from "react"
-import Constants from 'expo-constants'
-import { bindActionCreators } from "redux"
-import { connect } from "react-redux"
-import { StyleSheet, View } from "react-native"
-import { FlashList } from "@shopify/flash-list"
-import usePrevious from "react-use/lib/usePrevious"
-import useCoverSize from '../../hooks/useCoverSize'
+import { useMemo, useRef, useCallback } from 'react';
+import Constants from 'expo-constants';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+import { StyleSheet, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import usePrevious from 'react-use/lib/usePrevious';
+import useCoverSize from '../../hooks/useCoverSize';
 
-import LibraryBook from "../basic/LibraryBook"
-import CoversRow from "../basic/CoversRow"
-import Cover from "../basic/Cover"
+import LibraryBook from '../basic/LibraryBook';
+import CoversRow from '../basic/CoversRow';
+import Cover from '../basic/Cover';
 
 const {
   LIBRARY_COVERS_HORIZONTAL_MARGIN = 20,
   LIBRARY_COVERS_VERTICAL_MARGIN = 20,
   LIBRARY_COVERS_BOTTOM_PADDING = 20,
-} = Constants.expoConfig.extra
+} = Constants.expoConfig.extra;
 
 const styles = StyleSheet.create({
   container: {
@@ -33,90 +33,92 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
-})
+});
 
 const LibraryCovers = ({
   books,
-  bookList=[],
-  library={},
+  bookList = [],
+  library = {},
   viewingAudiobooks,
 }) => {
+  const { coverWidth, coverHeight, coversPerRow } = useCoverSize({
+    viewingAudiobooks,
+  });
 
-  const { coverWidth, coverHeight, coversPerRow } = useCoverSize({ viewingAudiobooks })
+  const doBookHighlight =
+    library.sort == 'recent' &&
+    coversPerRow > 1 &&
+    books[bookList[0]] &&
+    books[bookList[0]].downloadStatus === 2;
 
-  const doBookHighlight = (
-    library.sort == 'recent'
-    && coversPerRow > 1
-    && books[bookList[0]]
-    && books[bookList[0]].downloadStatus === 2
-  )
+  const list = useMemo(() => {
+    if (doBookHighlight) {
+      const numNormalInEachHighlightRow = coversPerRow - 2;
+      const startingIndexForNormalInHighlightRow1 = 1;
+      const startingIndexForNormalInHighlightRow2 =
+        1 + numNormalInEachHighlightRow;
+      const startingIndexForNormalRows = 1 + numNormalInEachHighlightRow * 2;
+      const numNormalRows = Math.ceil(
+        (bookList.length - 1 - numNormalInEachHighlightRow) / coversPerRow,
+      );
 
-  const list = useMemo(
-    () => {
-
-      if(doBookHighlight) {
-        const numNormalInEachHighlightRow = coversPerRow - 2
-        const startingIndexForNormalInHighlightRow1 = 1
-        const startingIndexForNormalInHighlightRow2 = 1 + numNormalInEachHighlightRow
-        const startingIndexForNormalRows = 1 + numNormalInEachHighlightRow * 2
-        const numNormalRows = Math.ceil((bookList.length - 1 - numNormalInEachHighlightRow) / coversPerRow)
-
-        return [
-          {
-            key: `i:0`,
-            highlightedBookId: bookList[0],
-            row1BookIds: bookList.slice(
-              startingIndexForNormalInHighlightRow1,
-              startingIndexForNormalInHighlightRow1 + numNormalInEachHighlightRow
-            ),
-            row2BookIds: bookList.slice(
-              startingIndexForNormalInHighlightRow2,
-              startingIndexForNormalInHighlightRow2 + numNormalInEachHighlightRow
-            ),
-          },
-          ...Array(numNormalRows)
-            .fill()
-            .map((x, idx) => ({
-              key: `i:${idx + 1}`,
-              bookIds: bookList.slice(
-                startingIndexForNormalRows + coversPerRow * idx,
-                startingIndexForNormalRows + coversPerRow * idx + coversPerRow
-              ),
-            }))
-        ]
-
-      } else {  // no highlight row
-        const numRows = Math.ceil(bookList.length / coversPerRow)
-        return Array(numRows)
+      return [
+        {
+          key: `i:0`,
+          highlightedBookId: bookList[0],
+          row1BookIds: bookList.slice(
+            startingIndexForNormalInHighlightRow1,
+            startingIndexForNormalInHighlightRow1 + numNormalInEachHighlightRow,
+          ),
+          row2BookIds: bookList.slice(
+            startingIndexForNormalInHighlightRow2,
+            startingIndexForNormalInHighlightRow2 + numNormalInEachHighlightRow,
+          ),
+        },
+        ...Array(numNormalRows)
           .fill()
           .map((x, idx) => ({
-            key: `i:${idx}`,
-            bookIds: bookList.slice(coversPerRow * idx, coversPerRow * idx + coversPerRow),
-          }))
-      }
-    },
-    [ coversPerRow, bookList, books ],
-  )
+            key: `i:${idx + 1}`,
+            bookIds: bookList.slice(
+              startingIndexForNormalRows + coversPerRow * idx,
+              startingIndexForNormalRows + coversPerRow * idx + coversPerRow,
+            ),
+          })),
+      ];
+    } else {
+      // no highlight row
+      const numRows = Math.ceil(bookList.length / coversPerRow);
+      return Array(numRows)
+        .fill()
+        .map((x, idx) => ({
+          key: `i:${idx}`,
+          bookIds: bookList.slice(
+            coversPerRow * idx,
+            coversPerRow * idx + coversPerRow,
+          ),
+        }));
+    }
+  }, [coversPerRow, bookList, books]);
 
-  const flatListRef = useRef()
+  const flatListRef = useRef();
 
   const scrollToTop = () => {
-    if (flatListRef.current) flatListRef.current.scrollToOffset({ offset: 0, animated: false });
-  }
+    if (flatListRef.current)
+      flatListRef.current.scrollToOffset({ offset: 0, animated: false });
+  };
 
-  const prevLibrary = usePrevious(library)
+  const prevLibrary = usePrevious(library);
 
   // scroll to top if sort or scope changed
-  if(
-    prevLibrary
-    && library
-    && ['sort', 'scope'].some(key => (
-      prevLibrary[key]
-      && library[key]
-      && prevLibrary[key] != library[key]
-    ))
+  if (
+    prevLibrary &&
+    library &&
+    ['sort', 'scope'].some(
+      (key) =>
+        prevLibrary[key] && library[key] && prevLibrary[key] != library[key],
+    )
   ) {
-    scrollToTop()
+    scrollToTop();
   }
 
   // const scrollToTopIfSortIsRecent = ({ action }) => {
@@ -127,16 +129,12 @@ const LibraryCovers = ({
   // TODO: navigation.addListener("willFocus", scrollToTopIfSortIsRecent)
   // this.navigationWillFocusListener.remove()
 
-
   const renderItem = useCallback(
     ({ item, index }) => {
-      const { bookIds, highlightedBookId, row1BookIds, row2BookIds } = item
+      const { bookIds, highlightedBookId, row1BookIds, row2BookIds } = item;
 
       const getCover = ({ bookId, width, height }) => (
-        <LibraryBook
-          key={bookId}
-          bookId={bookId}
-        >
+        <LibraryBook key={bookId} bookId={bookId}>
           <Cover
             bookId={bookId}
             bookInfo={books[bookId]}
@@ -144,22 +142,25 @@ const LibraryCovers = ({
             bookHeight={height || coverHeight}
           />
         </LibraryBook>
-      )
+      );
 
-      if(highlightedBookId) {  // this is a highlight row
+      if (highlightedBookId) {
+        // this is a highlight row
 
         const highlightedCover = getCover({
           bookId: highlightedBookId,
           width: coverWidth + LIBRARY_COVERS_HORIZONTAL_MARGIN + coverWidth,
-          height: coverHeight + LIBRARY_COVERS_BOTTOM_PADDING + LIBRARY_COVERS_VERTICAL_MARGIN + coverHeight,
-        })
-        const row1Covers = row1BookIds.map(bookId => getCover({ bookId }))
-        const row2Covers = row2BookIds.map(bookId => getCover({ bookId }))
+          height:
+            coverHeight +
+            LIBRARY_COVERS_BOTTOM_PADDING +
+            LIBRARY_COVERS_VERTICAL_MARGIN +
+            coverHeight,
+        });
+        const row1Covers = row1BookIds.map((bookId) => getCover({ bookId }));
+        const row2Covers = row2BookIds.map((bookId) => getCover({ bookId }));
 
         return (
-          <CoversRow
-            isFirstRow={index === 0}
-          >
+          <CoversRow isFirstRow={index === 0}>
             {highlightedCover}
             <View>
               <View style={styles.normalCoversRow1InHighlightedRow}>
@@ -170,47 +171,39 @@ const LibraryCovers = ({
               </View>
             </View>
           </CoversRow>
-        )
-
+        );
       } else {
+        const covers = bookIds.map((bookId) => getCover({ bookId }));
 
-        const covers = bookIds.map(bookId => getCover({ bookId }))
-
-        return (
-          <CoversRow
-            isFirstRow={index === 0}
-          >
-            {covers}
-          </CoversRow>
-        )
+        return <CoversRow isFirstRow={index === 0}>{covers}</CoversRow>;
       }
     },
-    [ books, coverWidth, coverHeight ],
-  )
+    [books, coverWidth, coverHeight],
+  );
 
   return (
-    <View
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <FlashList
         data={list}
         renderItem={renderItem}
-        estimatedItemSize={LIBRARY_COVERS_VERTICAL_MARGIN + coverHeight + LIBRARY_COVERS_BOTTOM_PADDING}
+        estimatedItemSize={
+          LIBRARY_COVERS_VERTICAL_MARGIN +
+          coverHeight +
+          LIBRARY_COVERS_BOTTOM_PADDING
+        }
         showsVerticalScrollIndicator={false}
         ref={flatListRef}
         ListFooterComponent={<View style={styles.flatlist} />}
       />
-
     </View>
-  )
-}
+  );
+};
 
 const mapStateToProps = ({ library, books }) => ({
   library,
   books,
-})
+});
 
-const matchDispatchToProps = (dispatch) => bindActionCreators({
-}, dispatch)
+const matchDispatchToProps = (dispatch) => bindActionCreators({}, dispatch);
 
-export default connect(mapStateToProps, matchDispatchToProps)(LibraryCovers)
+export default connect(mapStateToProps, matchDispatchToProps)(LibraryCovers);

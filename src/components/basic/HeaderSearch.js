@@ -1,19 +1,23 @@
-import { useRef } from "react"
-import { StyleSheet, View, TouchableWithoutFeedback, Platform } from "react-native"
+import { useRef } from 'react';
+import {
+  StyleSheet,
+  View,
+  TouchableWithoutFeedback,
+  Platform,
+} from 'react-native';
 
-import Search from "../major/Search"
-import useWideMode from "../../hooks/useWideMode"
-
+import Search from '../major/Search';
+import useWideMode from '../../hooks/useWideMode';
 
 const searchContainer = {
   paddingTop: 5,
   backgroundColor: 'white',
-}
+};
 
 const styles = StyleSheet.create({
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, .5)",
+    backgroundColor: 'rgba(0, 0, 0, .5)',
     zIndex: 10,
     alignItems: 'center',
   },
@@ -27,14 +31,16 @@ const styles = StyleSheet.create({
     maxWidth: '90%',
     minHeight: 170,
     maxHeight: '90%',
-    ...(Platform.OS === 'web' ? {} : {
-      flex: 1,
-    }),
+    ...(Platform.OS === 'web'
+      ? {}
+      : {
+          flex: 1,
+        }),
   },
   header: {
     paddingBottom: 4,
   },
-})
+});
 
 const HeaderSearch = ({
   bookId,
@@ -43,17 +49,20 @@ const HeaderSearch = ({
   idpId,
   goTo,
 }) => {
+  const searchInputRef = useRef();
 
-  const searchInputRef = useRef()
+  const wideMode = useWideMode();
 
-  const wideMode = useWideMode()
-
-  if(!showSearch) return null
+  if (!showSearch) return null;
 
   return (
     <TouchableWithoutFeedback onPress={toggleShowSearch}>
       <View style={styles.modalBackdrop}>
-        <View style={wideMode ? styles.searchContainerWideMode : styles.searchContainer}>
+        <View
+          style={
+            wideMode ? styles.searchContainerWideMode : styles.searchContainer
+          }
+        >
           <Search
             bookId={bookId}
             goTo={goTo}
@@ -65,7 +74,7 @@ const HeaderSearch = ({
         </View>
       </View>
     </TouchableWithoutFeedback>
-  )
-}
+  );
+};
 
-export default HeaderSearch
+export default HeaderSearch;

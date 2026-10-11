@@ -1,33 +1,36 @@
-import React, { useCallback, useRef, useEffect } from "react"
-import Constants from 'expo-constants'
-import { StyleSheet, View, FlatList, Animated } from "react-native"
-import { bindActionCreators } from "redux"
-import { connect } from "react-redux"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import React, { useCallback, useRef, useEffect } from 'react';
+import Constants from 'expo-constants';
+import { StyleSheet, View, FlatList, Animated } from 'react-native';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import PagesSpineHeading from "../basic/PagesSpineHeading"
-import PagesRow from "../basic/PagesRow"
-import PagesPage from "../basic/PagesPage"
+import PagesSpineHeading from '../basic/PagesSpineHeading';
+import PagesRow from '../basic/PagesRow';
+import PagesPage from '../basic/PagesPage';
 // import BookProgress from "./BookProgress"
-import EnhancedHeader from "./EnhancedHeader"
+import EnhancedHeader from './EnhancedHeader';
 
-import { getToolbarHeight, getStatusBarCurrentHeight } from '../../utils/toolbox'
-import useAdjustedDimensions from "../../hooks/useAdjustedDimensions"
-import useSetTimeout from '../../hooks/useSetTimeout'
-import usePrevious from "react-use/lib/usePrevious"
-import usePageSize from "../../hooks/usePageSize"
-import useInstanceValue from "../../hooks/useInstanceValue"
-import useWideMode from "../../hooks/useWideMode"
-import useClassroomInfo from "../../hooks/useClassroomInfo"
+import {
+  getToolbarHeight,
+  getStatusBarCurrentHeight,
+} from '../../utils/toolbox';
+import useAdjustedDimensions from '../../hooks/useAdjustedDimensions';
+import useSetTimeout from '../../hooks/useSetTimeout';
+import usePrevious from 'react-use/lib/usePrevious';
+import usePageSize from '../../hooks/usePageSize';
+import useInstanceValue from '../../hooks/useInstanceValue';
+import useWideMode from '../../hooks/useWideMode';
+import useClassroomInfo from '../../hooks/useClassroomInfo';
 //import { getSpineInlineToolsHash } from "../../hooks/useSpineInlineToolsHash"  // this is currently unused
 
-const AnimatedFlatList = Animated.createAnimatedComponent(FlatList)
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
 const {
   PAGE_LIST_HEADER_ROW_HEIGHT = 20,
   PAGES_VERTICAL_MARGIN = 20,
   PAGES_HORIZONTAL_MARGIN = 20,
-} = Constants.expoConfig.extra
+} = Constants.expoConfig.extra;
 
 const styles = StyleSheet.create({
   container: {
@@ -41,62 +44,67 @@ const styles = StyleSheet.create({
   //   height: 1,
   //   backgroundColor: '#ccccce',
   // }
-})
+});
 
-const BookPages = React.memo(({
-  spineIdRef,
-  pageIndexInSpine,
-  spines,
-  bookId,
-  updateSnapshotCoords,
-  // capturingSnapshots,
-  zoomToPage,
-  inEditMode,
-  toggleInEditMode,
-  setModeToPage,
-  footerHeight,
+const BookPages = React.memo(
+  ({
+    spineIdRef,
+    pageIndexInSpine,
+    spines,
+    bookId,
+    updateSnapshotCoords,
+    // capturingSnapshots,
+    zoomToPage,
+    inEditMode,
+    toggleInEditMode,
+    setModeToPage,
+    footerHeight,
 
-  books,
-  userDataByBookId,
-  //displaySettings,  // this is currently unused
-  sidePanelSettings,
-}) => {
+    books,
+    userDataByBookId,
+    //displaySettings,  // this is currently unused
+    sidePanelSettings,
+  }) => {
+    const { bookVersion, canViewFrontMatter } = useClassroomInfo({
+      books,
+      bookId,
+      userDataByBookId,
+      inEditMode,
+    });
 
-  const { bookVersion, canViewFrontMatter } = useClassroomInfo({ books, bookId, userDataByBookId, inEditMode })
+    const { pageWidth, pageHeight } = usePageSize({ sidePanelSettings });
+    const { height } = useAdjustedDimensions({ sidePanelSettings });
+    const wideMode = useWideMode();
 
-  const { pageWidth, pageHeight } = usePageSize({ sidePanelSettings })
-  const { height } = useAdjustedDimensions({ sidePanelSettings })
-  const wideMode = useWideMode()
+    const prevSpineIdRef = usePrevious(spineIdRef);
+    const prevPageIndexInSpine = usePrevious(pageIndexInSpine);
+    const prevHeight = usePrevious(height);
 
-  const prevSpineIdRef = usePrevious(spineIdRef)
-  const prevPageIndexInSpine = usePrevious(pageIndexInSpine)
-  const prevHeight = usePrevious(height)
+    const animatedScrollPosition = useRef(new Animated.Value(0)).current;
+    const flatList = useRef();
 
-  const animatedScrollPosition = useRef(new Animated.Value(0)).current
-  const flatList = useRef()
+    const scrollToLatestLocationNextTimeReceivingProps = useRef(false);
 
-  const scrollToLatestLocationNextTimeReceivingProps = useRef(false)
+    // Next block commented out with syntax prior to upddate for hooks.
+    // this.opacity = this.animatedScrollPosition.interpolate({
+    //   inputRange: [0, 5],
+    //   outputRange: [0, 1],
+    // })
 
-  // Next block commented out with syntax prior to upddate for hooks.
-  // this.opacity = this.animatedScrollPosition.interpolate({
-  //   inputRange: [0, 5],
-  //   outputRange: [0, 1],
-  // })
+    const onScroll = useCallback(
+      Animated.event(
+        [{ nativeEvent: { contentOffset: { y: animatedScrollPosition } } }],
+        {
+          useNativeDriver: true,
+        },
+      ),
+      [],
+    );
 
-  const onScroll = useCallback(
-    Animated.event(
-      [{ nativeEvent: { contentOffset: { y: animatedScrollPosition } } }],
-      {
-        useNativeDriver: true,
-      },
-    ),
-    [],
-  )
-
-  // This useMemo calculates maxScroll and list, but list should remain the same
-  // mutable array and so is declared via a useRef.
-  const list = useRef([]).current
-  /*  DISABLED because it's not used
+    // This useMemo calculates maxScroll and list, but list should remain the same
+    // mutable array and so is declared via a useRef.
+    const list = useRef([]).current;
+    /*  DISABLED because it's not used
   const { maxScroll } = useMemo(
     () => {
 
@@ -156,154 +164,168 @@ const BookPages = React.memo(({
   )
   */
 
-  const getItemLayout = useCallback(
-    (data, index) => {
-      const { key, offset } = data[index]
+    const getItemLayout = useCallback(
+      (data, index) => {
+        const { key, offset } = data[index];
 
-      return {
-        offset,  // the distance from the top of the first row to this row
-        length: key.substr(0,2) === 'H:' ? PAGE_LIST_HEADER_ROW_HEIGHT : pageHeight + PAGES_VERTICAL_MARGIN,  // the height of the row
-        index,
+        return {
+          offset, // the distance from the top of the first row to this row
+          length:
+            key.substr(0, 2) === 'H:'
+              ? PAGE_LIST_HEADER_ROW_HEIGHT
+              : pageHeight + PAGES_VERTICAL_MARGIN, // the height of the row
+          index,
+        };
+      },
+      [pageHeight],
+    );
+
+    const safeAreaInsets = useSafeAreaInsets();
+
+    const getScrollToLatestLocation = useInstanceValue(() => {
+      if (spineIdRef == null || pageIndexInSpine == null) return;
+      if (list.length === 0) return;
+      if (!flatList.current) return;
+
+      if (!spines) {
+        scrollToLatestLocationNextTimeReceivingProps.current = true;
+        return;
       }
-    },
-    [ pageHeight ],
-  )
 
-  const safeAreaInsets = useSafeAreaInsets()
-
-  const getScrollToLatestLocation = useInstanceValue(() => {
-
-      if(spineIdRef == null || pageIndexInSpine == null) return
-      if(list.length === 0) return
-      if(!flatList.current) return
-
-      if(!spines) {
-        scrollToLatestLocationNextTimeReceivingProps.current = true
-        return
-      }
-
-      const heightWithoutStatusBar = height - getStatusBarCurrentHeight()
-      let index = 0
-      let indexInRow = 0
+      const heightWithoutStatusBar = height - getStatusBarCurrentHeight();
+      let index = 0;
+      let indexInRow = 0;
 
       list.some((item, idx) => {
-        const { key, pageIndicesInSpine } = item
+        const { key, pageIndicesInSpine } = item;
 
         // if it is a header row, no match
-        if(key.substr(0,2) === 'H:') return false
+        if (key.substr(0, 2) === 'H:') return false;
 
         // if not the correct spine, no match
-        if(key.split(':').slice(3).join(':') !== spineIdRef) return false
+        if (key.split(':').slice(3).join(':') !== spineIdRef) return false;
 
         // if page index not in this row, no match
-        if(!pageIndicesInSpine.includes(pageIndexInSpine)) return false
+        if (!pageIndicesInSpine.includes(pageIndexInSpine)) return false;
 
-        index = idx
-        indexInRow = pageIndicesInSpine.indexOf(pageIndexInSpine)
-        return true
-      })
+        index = idx;
+        indexInRow = pageIndicesInSpine.indexOf(pageIndexInSpine);
+        return true;
+      });
 
       flatList.current.scrollToIndex({
         index,
-        viewOffset: (
-          (
-            !wideMode
-            && bookVersion !== 'BASE'
-          )
-            // calc half of the enhanced header height and negate it
-            ? (10*2 + 37*(canViewFrontMatter ? 2 : 1)) / -2
-            : 0
-        ),
+        viewOffset:
+          !wideMode && bookVersion !== 'BASE'
+            ? // calc half of the enhanced header height and negate it
+              (10 * 2 + 37 * (canViewFrontMatter ? 2 : 1)) / -2
+            : 0,
         viewPosition: 0.5,
         // animated: false,
-      })
+      });
 
       // since this might not be immediately rendered (given the FlatList), let's calculate its position
-      const thisItemOffset = getItemLayout(list, index).offset
-      const scrolledToTopYPos = thisItemOffset + getToolbarHeight()
-      const middleYPos = (heightWithoutStatusBar - getToolbarHeight() - footerHeight)/2 - (pageHeight + PAGES_VERTICAL_MARGIN)/2 + getToolbarHeight() + getStatusBarCurrentHeight() + (safeAreaInsets.top - safeAreaInsets.bottom)
-      const lastItemLayout = getItemLayout(list, list.length - 1)
-      const scrolledToBottomYPos = heightWithoutStatusBar - footerHeight - ((lastItemLayout.offset + lastItemLayout.length) - thisItemOffset)
+      const thisItemOffset = getItemLayout(list, index).offset;
+      const scrolledToTopYPos = thisItemOffset + getToolbarHeight();
+      const middleYPos =
+        (heightWithoutStatusBar - getToolbarHeight() - footerHeight) / 2 -
+        (pageHeight + PAGES_VERTICAL_MARGIN) / 2 +
+        getToolbarHeight() +
+        getStatusBarCurrentHeight() +
+        (safeAreaInsets.top - safeAreaInsets.bottom);
+      const lastItemLayout = getItemLayout(list, list.length - 1);
+      const scrolledToBottomYPos =
+        heightWithoutStatusBar -
+        footerHeight -
+        (lastItemLayout.offset + lastItemLayout.length - thisItemOffset);
       updateSnapshotCoords({
-        x: PAGES_HORIZONTAL_MARGIN + (pageWidth + PAGES_HORIZONTAL_MARGIN) * indexInRow,
-        y: Math.max( Math.min( middleYPos, scrolledToTopYPos ), scrolledToBottomYPos )
-      })
+        x:
+          PAGES_HORIZONTAL_MARGIN +
+          (pageWidth + PAGES_HORIZONTAL_MARGIN) * indexInRow,
+        y: Math.max(
+          Math.min(middleYPos, scrolledToTopYPos),
+          scrolledToBottomYPos,
+        ),
+      });
 
-      return true
-  })
+      return true;
+    });
 
-  const doScrollToLatestLocation = (
-    spineIdRef !== prevSpineIdRef
-    || pageIndexInSpine !== prevPageIndexInSpine
-    || height !== prevHeight
-    || scrollToLatestLocationNextTimeReceivingProps.current
-  )
+    const doScrollToLatestLocation =
+      spineIdRef !== prevSpineIdRef ||
+      pageIndexInSpine !== prevPageIndexInSpine ||
+      height !== prevHeight ||
+      scrollToLatestLocationNextTimeReceivingProps.current;
 
-  useEffect(
-    () => {
-      if(doScrollToLatestLocation) {
-        scrollToLatestLocationNextTimeReceivingProps.current = false
-        getScrollToLatestLocation()()
+    useEffect(() => {
+      if (doScrollToLatestLocation) {
+        scrollToLatestLocationNextTimeReceivingProps.current = false;
+        getScrollToLatestLocation()();
       }
-    },
-    [ doScrollToLatestLocation ],
-  )
+    }, [doScrollToLatestLocation]);
 
-  const [ setScrollToLatestTimeout ] = useSetTimeout()
+    const [setScrollToLatestTimeout] = useSetTimeout();
 
-  const renderItem = useCallback(
-    ({ item }) => {
-      const { key, label, pageIndicesInSpine, pageCfisKey, cfis } = item
+    const renderItem = useCallback(
+      ({ item }) => {
+        const { key, label, pageIndicesInSpine, pageCfisKey, cfis } = item;
 
-      if(key.substr(0,2) === 'H:') {
+        if (key.substr(0, 2) === 'H:') {
+          return <PagesSpineHeading>{label}</PagesSpineHeading>;
+        } else {
+          const itemSpineIdRef = key.split(':').slice(3).join(':');
 
-        return <PagesSpineHeading>{label}</PagesSpineHeading>
+          const pages = pageIndicesInSpine.map((itemPageIndexInSpine, i) => (
+            <PagesPage
+              key={i}
+              pageWidth={pageWidth}
+              pageHeight={pageHeight}
+              bookId={bookId}
+              spineIdRef={itemSpineIdRef}
+              pageCfisKey={pageCfisKey}
+              pageIndexInSpine={
+                itemPageIndexInSpine === -1 ? 0 : itemPageIndexInSpine
+              }
+              cfi={cfis[i]}
+              indicateMultiplePages={itemPageIndexInSpine === -1}
+              zoomToPage={zoomToPage}
+              isCurrentPage={
+                itemSpineIdRef === spineIdRef &&
+                itemPageIndexInSpine === pageIndexInSpine
+              }
+              inEditMode={inEditMode}
+            />
+          ));
 
-      } else {
+          return <PagesRow>{pages}</PagesRow>;
+        }
+      },
+      [
+        bookId,
+        spineIdRef,
+        pageIndexInSpine,
+        pageWidth,
+        pageHeight,
+        zoomToPage,
+        inEditMode,
+      ],
+    );
 
-        const itemSpineIdRef = key.split(':').slice(3).join(':')
-
-        const pages = pageIndicesInSpine.map((itemPageIndexInSpine, i) => (
-          <PagesPage
-            key={i}
-            pageWidth={pageWidth}
-            pageHeight={pageHeight}
-            bookId={bookId}
-            spineIdRef={itemSpineIdRef}
-            pageCfisKey={pageCfisKey}
-            pageIndexInSpine={itemPageIndexInSpine === -1 ? 0 : itemPageIndexInSpine}
-            cfi={cfis[i]}
-            indicateMultiplePages={itemPageIndexInSpine === -1}
-            zoomToPage={zoomToPage}
-            isCurrentPage={itemSpineIdRef === spineIdRef && itemPageIndexInSpine === pageIndexInSpine}
-            inEditMode={inEditMode}
-          />
-        ))
-
-        return <PagesRow>{pages}</PagesRow>
-      }
-    },
-    [ bookId, spineIdRef, pageIndexInSpine, pageWidth, pageHeight, zoomToPage, inEditMode ],
-  )
-
-  useEffect(
-    () => {
+    useEffect(() => {
       // initialScrollIndex does not work, causing invalid indexes to get sent to getItemLayout.
       // Without this timeout, flatList.current is not set and sticky headers are not accounted for.
-      let maxAttempts = 10
+      let maxAttempts = 10;
       const tryInitialScroll = () => {
         setScrollToLatestTimeout(() => {
-          if(!getScrollToLatestLocation()() && maxAttempts-- > 0) {
-            tryInitialScroll()
+          if (!getScrollToLatestLocation()() && maxAttempts-- > 0) {
+            tryInitialScroll();
           }
-        }, 200)
-      }
-      tryInitialScroll()
-    },
-    [],
-  )
+        }, 200);
+      };
+      tryInitialScroll();
+    }, []);
 
-  /*  DISABLED because it's not used
+    /*  DISABLED because it's not used
   const scrollToPercentage = useCallback(
     percent => {
       flatList.current && flatList.current.scrollToOffset({ offset: (percent/100) * maxScroll, animated: false })
@@ -312,42 +334,41 @@ const BookPages = React.memo(({
   )
   */
 
-  if(list.length === 0) return null
+    if (list.length === 0) return null;
 
-  const estimatedRowsPerPage = parseInt(height / (pageHeight + PAGES_VERTICAL_MARGIN), 10) + 2
+    const estimatedRowsPerPage =
+      parseInt(height / (pageHeight + PAGES_VERTICAL_MARGIN), 10) + 2;
 
-  return (
-    <View
-      style={styles.container}
-    >
-      {!wideMode &&
-        <EnhancedHeader
-          bookId={bookId}
-          inEditMode={inEditMode}
-          toggleInEditMode={toggleInEditMode}
-          setModeToPage={setModeToPage}
+    return (
+      <View style={styles.container}>
+        {!wideMode && (
+          <EnhancedHeader
+            bookId={bookId}
+            inEditMode={inEditMode}
+            toggleInEditMode={toggleInEditMode}
+            setModeToPage={setModeToPage}
+          />
+        )}
+        <AnimatedFlatList
+          data={list}
+          renderItem={renderItem}
+          // The random number in extraData forces renderItem calls on every item
+          // in the data. (There is not a way to have renderItem called on only
+          // a subset of the changed data.)
+          extraData={{ selected: Math.random() }} // forces rerender of all items
+          initialNumToRender={estimatedRowsPerPage}
+          maxToRenderPerBatch={estimatedRowsPerPage}
+          updateCellsBatchingPeriod={500} // wait this # ms between render batches
+          windowSize={11} // i.e. 5 pages above and below rendered
+          showsVerticalScrollIndicator={false}
+          //stickyHeaderIndices={headerIndices}
+          getItemLayout={getItemLayout}
+          onScroll={onScroll}
+          scrollEventThrottle={1}
+          ref={flatList}
         />
-      }
-      <AnimatedFlatList
-        data={list}
-        renderItem={renderItem}
-        // The random number in extraData forces renderItem calls on every item
-        // in the data. (There is not a way to have renderItem called on only
-        // a subset of the changed data.)
-        extraData={{ selected: Math.random() }}  // forces rerender of all items
-        initialNumToRender={estimatedRowsPerPage}
-        maxToRenderPerBatch={estimatedRowsPerPage}
-        updateCellsBatchingPeriod={500}  // wait this # ms between render batches
-        windowSize={11}  // i.e. 5 pages above and below rendered
-        showsVerticalScrollIndicator={false}
-        //stickyHeaderIndices={headerIndices}
-        getItemLayout={getItemLayout}
-        onScroll={onScroll}
-        scrollEventThrottle={1}
-        ref={flatList}
-      />
-      {/* <Animated.View style={[ styles.headerBottomBorder, { opacity } ]} /> */}
-      {/* {maxScroll
+        {/* <Animated.View style={[ styles.headerBottomBorder, { opacity } ]} /> */}
+        {/* {maxScroll
         ?
           <BookProgress
             animatedScrollPosition={animatedScrollPosition}
@@ -357,19 +378,23 @@ const BookPages = React.memo(({
           />
         : null
       } */}
-    </View>
-  )
+      </View>
+    );
+  },
+);
 
-})
-
-const mapStateToProps = ({ books, userDataByBookId, displaySettings, sidePanelSettings }) => ({
+const mapStateToProps = ({
   books,
   userDataByBookId,
   displaySettings,
   sidePanelSettings,
-})
+}) => ({
+  books,
+  userDataByBookId,
+  displaySettings,
+  sidePanelSettings,
+});
 
-const matchDispatchToProps = (dispatch) => bindActionCreators({
-}, dispatch)
+const matchDispatchToProps = (dispatch) => bindActionCreators({}, dispatch);
 
-export default connect(mapStateToProps, matchDispatchToProps)(BookPages)
+export default connect(mapStateToProps, matchDispatchToProps)(BookPages);
