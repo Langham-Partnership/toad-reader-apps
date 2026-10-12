@@ -22,6 +22,7 @@
       "QUOTES_DOMAIN": "q.read.test",
       "REQUEST_OPTIONS": {},
       "SENTRY_DSN": "https://7d0aa06bd81c0188c75a4629494e954c@o552165.ingest.us.sentry.io/4508880446423040",
+      "SENTRY_ENVIRONMENT": "development",
       "VERSION_BUCKET": "bucket-versions-booklane"
     },
     "ios": {
