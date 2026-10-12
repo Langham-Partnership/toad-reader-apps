@@ -9,6 +9,8 @@ import {
   setStatusBarHidden,
   getStatusBarCurrentHeight,
   getIsAndroidWithCameraWithinScreen,
+  getPageTop,
+  getHasNotchInsets,
 } from '../../utils/toolbox';
 
 import useWideMode from '../../hooks/useWideMode';
@@ -248,17 +250,26 @@ const Highlighter = React.memo(
         style={[
           styles.container,
           selectionInfo.copyTooltipInLowerHalf || keyboardShowing
-            ? {
-                top:
-                  safeAreaInsets.top > 30 ? (safeAreaInsets.top - 20) * -1 : 0,
-                paddingTop: Math.max(
-                  safeAreaInsets.top +
-                    getStatusBarCurrentHeight() -
-                    10 -
-                    (getIsAndroidWithCameraWithinScreen() ? 20 : 0),
-                  0,
-                ),
-              }
+            ? Platform.OS === 'android' && !wideMode
+              ? {
+                  // From the top edge of the screen, with its content below the status bar.
+                  // This view sits in the page, which starts getPageTop() from the bottom
+                  // edge of the status bar (Book.js).
+                  top: (safeAreaInsets.top + getPageTop()) * -1,
+                  paddingTop: safeAreaInsets.top,
+                }
+              : {
+                  top: getHasNotchInsets(safeAreaInsets)
+                    ? (safeAreaInsets.top - 20) * -1
+                    : 0,
+                  paddingTop: Math.max(
+                    safeAreaInsets.top +
+                      getStatusBarCurrentHeight() -
+                      10 -
+                      (getIsAndroidWithCameraWithinScreen() ? 20 : 0),
+                    0,
+                  ),
+                }
             : {
                 bottom: 0,
                 paddingBottom: safeAreaInsets.bottom,

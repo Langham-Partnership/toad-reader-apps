@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 // import { Ionicons } from "@expo/vector-icons"
 import { Layout, Drawer, DrawerItem } from '@ui-kitten/components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { i18n } from 'inline-i18n';
 import * as Updates from 'expo-updates';
 
@@ -151,6 +152,11 @@ const AppMenu = ({
 
   const hasNoAuth = useHasNoAuth(accounts);
   const loggedInUser = useLoggedInUser(accounts);
+
+  // Android draws edge to edge, so the drawer reaches down behind the navigation bar.
+  const safeAreaInsets = useSafeAreaInsets();
+  const androidNavigationBarHeight =
+    Platform.OS === 'android' ? safeAreaInsets.bottom : 0;
   const {
     authMethod,
     devAuthMethod,
@@ -626,9 +632,13 @@ const AppMenu = ({
         )}
 
         <Text style={styles.subversion}>Updated PUSH_DATE_STRING</Text>
+
+        {androidNavigationBarHeight > 0 && (
+          <View style={{ height: androidNavigationBarHeight }} />
+        )}
       </>
     ),
-    [],
+    [androidNavigationBarHeight],
   );
 
   return (

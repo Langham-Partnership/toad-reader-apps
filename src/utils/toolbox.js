@@ -128,6 +128,22 @@ export const getIsAndroidWithCameraWithinScreen = () =>
 // Given the link above, it is clear that it will be treated as a camera within screen for some where that is not true,
 // but this might be an okay solution since it just means more padding at the top.
 
+// Where the reader page starts, measured from the top of SafeLayout's content, which is the
+// bottom edge of the status bar. With -20 the reader's own top margin of 30 leaves the first
+// line of text 10 below the status bar.
+export const getPageTop = () =>
+  getIsAndroidWithCameraWithinScreen() || Platform.OS === 'ios'
+    ? -20
+    : getStatusBarCurrentHeight() * -1;
+
+// A top inset above 30 means an iPhone with a notch or a Dynamic Island, and the code that asks
+// for it was written for those phones. Since Android draws edge to edge (from Expo SDK 54) it
+// reports its status bar as the top inset too, often taller than 30 (a camera cut-out), and
+// none of that iPhone arithmetic fits it. What the insets mean for the reader page on Android
+// is worked out in useAdjustedDimensions.
+export const getHasNotchInsets = (safeAreaInsets) =>
+  Platform.OS !== 'android' && safeAreaInsets.top > 30;
+
 export const getFullName = (user) =>
   user ? `${user.fullname || ''}`.trim() : ``;
 

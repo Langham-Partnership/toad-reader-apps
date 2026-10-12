@@ -22,12 +22,11 @@ import parseEpub from '../../utils/parseEpub';
 import {
   getPageCfisKey,
   getToolbarHeight,
-  getStatusBarCurrentHeight,
   setStatusBarHidden,
   showConsent,
   getIdsFromAccountId,
   getToolCfiCounts,
-  getIsAndroidWithCameraWithinScreen,
+  getPageTop,
 } from '../../utils/toolbox';
 import useSetTimeout from '../../hooks/useSetTimeout';
 import useRouterState from '../../hooks/useRouterState';
@@ -89,10 +88,7 @@ const {
   MAX_TOOLS_PER_SPOT = 10,
 } = Constants.expoConfig.extra;
 
-const pageTop =
-  getIsAndroidWithCameraWithinScreen() || Platform.OS === 'ios'
-    ? -20
-    : getStatusBarCurrentHeight() * -1;
+const pageTop = getPageTop();
 
 const pageTopInWideMode = {
   top: getToolbarHeight(),
@@ -336,8 +332,11 @@ const Book = React.memo(
     const latest_location = (userDataByBookId[bookId] || {}).latest_location;
     const { spineIdRef, cfi } = useSpineIdRefAndCfi(latest_location);
 
-    const { fullPageWidth: width, fullPageHeight: height } =
-      useAdjustedDimensions({ sidePanelSettings });
+    const {
+      fullPageWidth: width,
+      fullPageHeight: height,
+      height: windowHeight,
+    } = useAdjustedDimensions({ sidePanelSettings });
     const wideMode = useWideMode();
     const safeAreaInsets = useSafeAreaInsets();
 
@@ -408,7 +407,10 @@ const Book = React.memo(
     const cornerSnapshotCoords = useMemo(
       () => ({
         x: 0,
-        y: height - safeAreaInsets.bottom,
+        y:
+          Platform.OS === 'android' && !wideMode
+            ? windowHeight - safeAreaInsets.top // the bottom edge of the screen (see useAdjustedDimensions)
+            : height - safeAreaInsets.bottom,
       }),
       [height],
     );

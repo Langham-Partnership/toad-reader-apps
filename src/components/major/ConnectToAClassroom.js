@@ -14,6 +14,7 @@ import {
   getReqOptionsWithAdditions,
   getIdsFromAccountId,
   safeFetch,
+  getHasNotchInsets,
 } from '../../utils/toolbox';
 import { refreshUserData } from '../../utils/syncUserData';
 import { setCurrentClassroom } from '../../redux/actions';
@@ -209,7 +210,9 @@ const ConnectToAClassroom = React.memo(
           style={[
             styles.modal,
             {
-              top: safeAreaInsets.top > 30 ? safeAreaInsets.top * -1 - 4 : 0, // I do not know why the 4 is needed
+              top: getHasNotchInsets(safeAreaInsets)
+                ? safeAreaInsets.top * -1 - 4
+                : 0, // I do not know why the 4 is needed
             },
           ]}
         >

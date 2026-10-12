@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import Constants from 'expo-constants';
-import { Animated, Easing, StyleSheet, Image } from 'react-native';
+import { Animated, Easing, StyleSheet, Image, Platform } from 'react-native';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import {
   getToolbarHeight,
   getStatusBarCurrentHeight,
   getIsAndroidWithCameraWithinScreen,
+  getHasNotchInsets,
 } from '../../utils/toolbox';
 
 import usePrevious from 'react-use/lib/usePrevious';
@@ -24,6 +25,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  snapshotContAndroidPhone: {
+    position: 'absolute',
+    top: 0,
     left: 0,
     right: 0,
   },
@@ -64,6 +71,10 @@ const ZoomPage = ({
     useAdjustedDimensions({ sidePanelSettings });
   const wideMode = useWideMode();
   const safeAreaInsets = useSafeAreaInsets();
+
+  // On an Android phone the snapshot is a picture of the page WebView alone, which starts at
+  // the top of this view and is fullPageHeight tall (see useAdjustedDimensions).
+  const androidPhone = Platform.OS === 'android' && !wideMode;
 
   const scale = useRef(new Animated.Value(zoomed ? 1 : zoomScale));
   const opacity = useRef(new Animated.Value(1));
@@ -127,7 +138,7 @@ const ZoomPage = ({
       outputRangeY =
         top -
         (fullPageHeight / 2 - pageHeight / 2) +
-        (safeAreaInsets.top > 30 ? 20 : 0);
+        (getHasNotchInsets(safeAreaInsets) ? 20 : 0);
     }
 
     translateX.current = scale.current.interpolate({
@@ -171,17 +182,21 @@ const ZoomPage = ({
   return (
     <Animated.View
       style={[
-        styles.snapshotCont,
+        androidPhone ? styles.snapshotContAndroidPhone : styles.snapshotCont,
         zoomStyles1,
-        {
-          top:
-            (truePageMarginTop -
-              (safeAreaInsets.top > 30 ? 20 : 0) -
-              (getIsAndroidWithCameraWithinScreen()
-                ? getStatusBarCurrentHeight() - 20
-                : 0)) *
-            -1,
-        },
+        androidPhone
+          ? {
+              height: fullPageHeight,
+            }
+          : {
+              top:
+                (truePageMarginTop -
+                  (getHasNotchInsets(safeAreaInsets) ? 20 : 0) -
+                  (getIsAndroidWithCameraWithinScreen()
+                    ? getStatusBarCurrentHeight() - 20
+                    : 0)) *
+                -1,
+            },
       ]}
     >
       <Animated.View style={[styles.snapshot, zoomStyles2]}>
