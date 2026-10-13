@@ -15,3 +15,14 @@
 
 /google-services.json
 /GoogleService-Info.plist
+
+# Signing keys and store credentials: this repository is public, and EAS writes some of these into the project folder
+/credentials.json
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.mobileprovision
+*service-account*.json
+langham-ereader-*.json

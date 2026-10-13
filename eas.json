@@ -20,8 +20,8 @@
         "channel": "development"
       },
       "ios": {
-        "resourceClass": "m-medium",
         "image": "sdk-54",
+        "resourceClass": "m-medium",
         "simulator": true
       }
     },
@@ -65,12 +65,20 @@
       "android": {
         "releaseStatus": "draft",
         "track": "internal"
+      },
+      "ios": {
+        "appleTeamId": "7K24P6SY28",
+        "ascAppId": "1616725456"
       }
     },
     "staging": {
       "android": {
         "releaseStatus": "draft",
         "track": "internal"
+      },
+      "ios": {
+        "appleTeamId": "7K24P6SY28",
+        "ascAppId": "1616725456"
       }
     }
   }

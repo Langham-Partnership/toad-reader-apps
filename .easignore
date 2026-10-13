@@ -3,3 +3,14 @@
 /dist/*
 /node_modules/*
 /web-build/*
+
+# Signing keys and store credentials must not travel in a build archive (.easignore replaces .gitignore for EAS)
+/credentials.json
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.mobileprovision
+*service-account*.json
+langham-ereader-*.json
