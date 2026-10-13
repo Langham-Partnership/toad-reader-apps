@@ -63,8 +63,13 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 0,
-    paddingBottom: '50%',
+    ...Platform.select({
+      // iOS draws the picture inside the content box, so a height of 0 leaves it no room.
+      // The picture brings its own pixel height as a style (500 for Langham): unset it, or
+      // the ratio is applied to that height and the picture is drawn at its full pixel size.
+      ios: { height: undefined, aspectRatio: 2 },
+      default: { height: 0, paddingBottom: '50%' },
+    }),
     resizeMode: 'cover',
     backgroundColor: '#e8e8e8',
   },
