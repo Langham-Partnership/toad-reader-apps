@@ -12,13 +12,12 @@ const styles = StyleSheet.create({
   },
 });
 
-export const getMediaUnavailableText = () =>
-  i18n('Audio and video are not available in this version of the app.');
-
 // Shown in place of a player while utils/media.js has nothing to play with
 const MediaUnavailable = ({ style, textStyle }) => (
   <View style={[styles.container, style]}>
-    <Text style={[styles.text, textStyle]}>{getMediaUnavailableText()}</Text>
+    <Text style={[styles.text, textStyle]}>
+      {i18n('Audio and video are not available in this version of the app.')}
+    </Text>
   </View>
 );
 

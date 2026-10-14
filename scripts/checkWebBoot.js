@@ -3,14 +3,14 @@
 // get past its spinner, or when the first screen throws while it renders.
 // Not covered: anything behind the sign-in. Without a session the first screen
 // is the hand-over to the sign-in page: no library, no menu and no reader.
-// Usage: node scripts/checkWebBoot.js [export folder] [seconds to wait for the first screen]
+// Usage: node scripts/checkWebBoot.js [export folder]
 
 const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom'); // installed with jest-environment-jsdom
 
 const exportDir = path.resolve(process.argv[2] || 'dist');
-const timeout = (Number(process.argv[3]) || 30) * 1000;
+const timeout = 30 * 1000;
 const settleTime = 2000;
 
 const html = fs.readFileSync(path.join(exportDir, 'index.html'), 'utf8');
@@ -31,44 +31,13 @@ const { window } = new JSDOM(html, {
   virtualConsole: new VirtualConsole(), // the app's console output is dropped
 });
 
-// Web APIs that jsdom does not provide and Node does
-[
-  'TextEncoder',
-  'TextDecoder',
-  'structuredClone',
-  'ReadableStream',
-  'Request',
-  'Response',
-  'BroadcastChannel',
-  'MessageChannel',
-].forEach((name) => {
-  window[name] = globalThis[name];
-});
+// Web APIs that jsdom does not provide and the bundle uses while it loads
+window.TextEncoder = globalThis.TextEncoder;
+window.TextDecoder = globalThis.TextDecoder;
 
-// Browser APIs that jsdom does not provide at all
-class Observer {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-window.ResizeObserver = Observer;
-window.IntersectionObserver = Observer;
-window.Worker = class {
-  postMessage() {}
-  terminate() {}
-};
-window.URL.createObjectURL = () => 'blob:web-boot-check';
-window.URL.revokeObjectURL = () => {};
 // Fonts count as loaded at once. Without this the app waits 12 seconds for its
 // icon fonts before it leaves the start-up spinner
 window.document.fonts = { load: () => Promise.resolve([{}]) };
-window.matchMedia = () => ({
-  matches: false,
-  addListener() {},
-  removeListener() {},
-  addEventListener() {},
-  removeEventListener() {},
-});
 
 // No request leaves the machine
 window.fetch = () => {

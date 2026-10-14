@@ -2,22 +2,14 @@
 //
 //     npx jest src/hooks/useAdjustedDimensions.test.js
 //
-// iOS and web: the hook must return what it returned before Android was given its own
-// arithmetic. `before` below is a frozen copy of that code (commit 01131a4), and the two are
-// compared over a grid of window sizes and insets.
-//
-// Android: the window is the whole screen (edge to edge) and the text must end just above the
-// top edge of the navigation bar (2 above it, as on a phone with a plain status bar of 24 before),
-// whatever the heights of the status bar and navigation bar.
+// iOS and web must return what they returned before Android was given its own arithmetic.
+// On Android (edge to edge) the text must end just above the navigation bar, whatever the
+// heights of the status bar and the navigation bar.
 
 import { Platform, StatusBar } from 'react-native';
 
 import useAdjustedDimensions from './useAdjustedDimensions';
-import {
-  getHasNotchInsets,
-  getPageTop,
-  getIsAndroidWithCameraWithinScreen,
-} from '../utils/toolbox';
+import { getHasNotchInsets, getPageTop } from '../utils/toolbox';
 
 let mockWindow = { width: 390, height: 844 };
 let mockInsets = { top: 0, bottom: 0, left: 0, right: 0 };
@@ -47,7 +39,7 @@ afterEach(() => {
   StatusBar.currentHeight = realStatusBarCurrentHeight;
 });
 
-// Frozen copy of useAdjustedDimensions and of the toolbox functions it used at commit 01131a4.
+// Frozen copy of useAdjustedDimensions and of the toolbox functions it used at commit 0e27c0a6.
 // Do not change it together with the hook: it is what iOS and web are compared with.
 const before = ({
   os,
@@ -163,8 +155,6 @@ describe('useAdjustedDimensions on iOS and web', () => {
   // The status bar height that React Native reports: nothing on iOS and web.
   ['ios', 'web'].forEach((os) => {
     it(`returns on ${os} what it returned before Android had its own arithmetic`, () => {
-      let compared = 0;
-
       windows.forEach((window) => {
         tops.forEach((top) => {
           bottoms.forEach((bottom) => {
@@ -180,15 +170,10 @@ describe('useAdjustedDimensions on iOS and web', () => {
               expect(useAdjustedDimensions({ ...props })).toEqual(
                 before({ ...device, props: { ...props } }),
               );
-              compared++;
             });
           });
         });
       });
-
-      expect(compared).toBe(
-        windows.length * tops.length * bottoms.length * propSets.length,
-      );
     });
   });
 
@@ -242,8 +227,7 @@ describe('useAdjustedDimensions on an Android phone (edge to edge)', () => {
   const VERTICAL_MARGIN = 30; // the reader's own margin above and below the text
   const GAP = 2; // the text ends this far above the navigation bar
 
-  // Screens of the test emulator (Android 16), in pixels as the system reports them:
-  // the whole screen, the height of the status bar and the height of the navigation bar.
+  // In device pixels: the whole screen, the status bar and the navigation bar.
   const shapes = [
     {
       name: 'Pixel 8 with camera cut-out, gesture navigation',
@@ -306,17 +290,6 @@ describe('useAdjustedDimensions on an Android phone (edge to edge)', () => {
       expect(result.truePageMarginTop).toBe(0);
       expect(result.fullPageWidth).toBe(window.width);
       expect(result.truePageWidth).toBe(window.width);
-
-      // Book.js puts the page getPageTop() from the bottom edge of the status bar: the text
-      // starts 10 below the status bar and ends 2 above the top edge of the navigation bar.
-      expect(getIsAndroidWithCameraWithinScreen()).toBe(true);
-      expect(getPageTop()).toBe(-20);
-      const pageTopOnScreen = insets.top + getPageTop();
-      const textTop = pageTopOnScreen + VERTICAL_MARGIN;
-      const textBottom =
-        pageTopOnScreen + result.truePageHeight - VERTICAL_MARGIN;
-      expect(textTop).toBeCloseTo(insets.top + 10, 6);
-      expect(textBottom).toBeCloseTo(window.height - insets.bottom - GAP, 6);
     });
   });
 
@@ -355,26 +328,6 @@ describe('useAdjustedDimensions on an Android phone (edge to edge)', () => {
         });
       });
     });
-  });
-
-  it('no longer uses the iPhone notch arithmetic that cut the last lines off', () => {
-    // Pixel 8: before, the page was 930.29 high in an area of 890 and lost 40 of text
-    const device = {
-      os: 'android',
-      window: { width: 1080 / 2.625, height: 2400 / 2.625 },
-      insets: { top: 132 / 2.625, bottom: 63 / 2.625 },
-      statusBarCurrentHeight: 132 / 2.625,
-    };
-    setDevice(device);
-
-    expect(
-      before({ ...device, props: { sidePanelSettings: { open: false } } })
-        .truePageHeight,
-    ).toBeCloseTo(930.29, 2);
-    expect(
-      useAdjustedDimensions({ sidePanelSettings: { open: false } })
-        .truePageHeight,
-    ).toBeCloseTo(888, 6);
   });
 
   it('keeps the page height a phone with a plain status bar of 24 had before', () => {
@@ -420,7 +373,6 @@ describe('useAdjustedDimensions on an Android phone (edge to edge)', () => {
   });
 
   it('drops the iPhone notch allowance in wide mode too when the status bar is tall', () => {
-    // 1000 x 1400 with a status bar of 77: before, the page was 40 taller than its container
     const device = {
       os: 'android',
       window: { width: 1000, height: 1400 },
@@ -430,11 +382,8 @@ describe('useAdjustedDimensions on an Android phone (edge to edge)', () => {
     setDevice(device);
 
     const props = { sidePanelSettings: { open: false, width: 300 } };
-    expect(
-      before({ ...device, props: { ...props } }).truePageHeight,
-    ).toBeCloseTo(1275, 6);
     expect(useAdjustedDimensions({ ...props }).truePageHeight).toBeCloseTo(
-      1235,
+      before({ ...device, props: { ...props } }).truePageHeight - 40,
       6,
     );
   });

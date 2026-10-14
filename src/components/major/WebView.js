@@ -9,7 +9,7 @@ const WebView = ({
     allowsLinkPreview={true} // Due to a bug, iPhone SE, X, 11, etc don't allow text selection without this.
     // The reader hides the iOS status bar by turning it white. Left on, a web view puts back the
     // style it found when it was created each time a window appears (the keyboard, for one),
-    // and the status bar then vanished in the library.
+    // which can leave the status bar white outside the reader.
     autoManageStatusBarEnabled={false}
     {...props}
   />

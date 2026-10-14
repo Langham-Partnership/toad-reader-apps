@@ -211,8 +211,8 @@ const ConnectToAClassroom = React.memo(
             styles.modal,
             {
               top: getHasNotchInsets(safeAreaInsets)
-                ? safeAreaInsets.top * -1 - 4
-                : 0, // I do not know why the 4 is needed
+                ? safeAreaInsets.top * -1 - 4 // I do not know why the 4 is needed
+                : 0,
             },
           ]}
         >

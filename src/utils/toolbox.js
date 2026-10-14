@@ -136,11 +136,9 @@ export const getPageTop = () =>
     ? -20
     : getStatusBarCurrentHeight() * -1;
 
-// A top inset above 30 means an iPhone with a notch or a Dynamic Island, and the code that asks
-// for it was written for those phones. Since Android draws edge to edge (from Expo SDK 54) it
-// reports its status bar as the top inset too, often taller than 30 (a camera cut-out), and
-// none of that iPhone arithmetic fits it. What the insets mean for the reader page on Android
-// is worked out in useAdjustedDimensions.
+// A top inset above 30 means an iPhone with a notch or a Dynamic Island, which the callers'
+// arithmetic was written for. Android draws edge to edge and reports its status bar as the top
+// inset, often above 30 with a camera cut-out, so it never counts (see useAdjustedDimensions).
 export const getHasNotchInsets = (safeAreaInsets) =>
   Platform.OS !== 'android' && safeAreaInsets.top > 30;
 

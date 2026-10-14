@@ -32,11 +32,9 @@ const useAdjustedDimensions = ({
   // An Android phone draws edge to edge: the window is the whole screen, and the status bar
   // (with any camera cut-out) and the navigation bar are the top and bottom insets. Book.js
   // starts the page getPageTop() from the bottom edge of the status bar and BookPage.js cuts
-  // it off at the top edge of the navigation bar. The page is made as tall as that distance
-  // plus the reader's own bottom margin, less a small gap, so the last line of text ends just
-  // above the navigation bar whatever the heights of the two bars. For a plain status bar of
-  // 24 this is the height the page always had. The insets are therefore not in
-  // fullPageHeight and must not be taken off it again further down.
+  // it off at the top edge of the navigation bar. The page is that distance plus the reader's
+  // bottom margin, less a small gap, so the last line of text ends just above the navigation
+  // bar. fullPageHeight already leaves the insets out: they must not be taken off it again below.
   const androidPhone = Platform.OS === 'android' && !wideMode;
 
   if (!fullPageWidth) {
