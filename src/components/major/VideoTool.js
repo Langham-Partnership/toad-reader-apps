@@ -35,6 +35,13 @@ export const youtubeRegex =
   /^https:\/\/(?:www\.)?youtube\.com\/watch\?v=([^&]*).*$/;
 export const shortYoutubeRegex = /^https:\/\/youtu\.be\/([^?]+).*$/;
 
+// The links that getVideoComponent embeds; any other link needs a video player (see media.js)
+export const getIsYouTubeOrVimeoLink = (videoLink = '') =>
+  vimeoRegex.test(videoLink) ||
+  !!(videoLink.match(youtubeRegex) ||
+    videoLink.match(shortYoutubeRegex) ||
+    [])[1];
+
 const VideoTool = React.memo(
   ({
     toolUid,

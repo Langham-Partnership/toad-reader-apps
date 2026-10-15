@@ -6,11 +6,11 @@ import useUnmount from 'react-use/lib/useUnmount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  setStatusBarHidden,
-  getStatusBarCurrentHeight,
+  getHasNotchInsets,
   getIsAndroidWithCameraWithinScreen,
   getPageTop,
-  getHasNotchInsets,
+  getStatusBarCurrentHeight,
+  setStatusBarHidden,
 } from '../../utils/toolbox';
 
 import useWideMode from '../../hooks/useWideMode';
@@ -262,8 +262,10 @@ const Highlighter = React.memo(
                   top: getHasNotchInsets(safeAreaInsets)
                     ? (safeAreaInsets.top - 20) * -1
                     : 0,
+                  // In wide mode on Android the page starts below the toolbar, clear of the
+                  // status bar inset
                   paddingTop: Math.max(
-                    safeAreaInsets.top +
+                    (Platform.OS === 'android' ? 0 : safeAreaInsets.top) +
                       getStatusBarCurrentHeight() -
                       10 -
                       (getIsAndroidWithCameraWithinScreen() ? 20 : 0),

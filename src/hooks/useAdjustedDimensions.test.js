@@ -3,8 +3,9 @@
 //     npx jest src/hooks/useAdjustedDimensions.test.js
 //
 // iOS and web must return what they returned before Android was given its own arithmetic.
-// On Android (edge to edge) the text must end just above the navigation bar, whatever the
-// heights of the status bar and the navigation bar.
+// On an Android phone (edge to edge) the text must end just above the navigation bar, whatever
+// the heights of the status bar and the navigation bar. In wide mode Android must compute what
+// it computed on SDK 53, when the window ended at both bars and the insets were 0.
 
 import { Platform, StatusBar } from 'react-native';
 
@@ -355,23 +356,6 @@ describe('useAdjustedDimensions on an Android phone (edge to edge)', () => {
     });
   });
 
-  it('leaves wide mode (a large tablet on its side) as it was, apart from the notch test', () => {
-    [24, 30].forEach((top) => {
-      const device = {
-        os: 'android',
-        window: { width: 1280, height: 800 },
-        insets: { top, bottom: 24 },
-        statusBarCurrentHeight: top,
-      };
-      setDevice(device);
-
-      const props = { sidePanelSettings: { open: false, width: 300 } };
-      expect(useAdjustedDimensions({ ...props })).toEqual(
-        before({ ...device, props: { ...props } }),
-      );
-    });
-  });
-
   it('drops the iPhone notch allowance in wide mode too when the status bar is tall', () => {
     const device = {
       os: 'android',
@@ -386,5 +370,157 @@ describe('useAdjustedDimensions on an Android phone (edge to edge)', () => {
       before({ ...device, props: { ...props } }).truePageHeight - 40,
       6,
     );
+  });
+});
+
+describe('useAdjustedDimensions in wide mode on Android (edge to edge)', () => {
+  const TOOLBAR = 56;
+
+  // Equal but for the last bits of a floating point sum, and for the window height, which
+  // now includes both bars
+  const expectSameDimensions = (actual, expected) => {
+    expect(Object.keys(actual).sort()).toEqual(Object.keys(expected).sort());
+    Object.keys(expected).forEach((key) => {
+      if (key !== 'height') {
+        expect(actual[key]).toBeCloseTo(expected[key], 6);
+      }
+    });
+  };
+
+  const windows = [
+    { width: 1280, height: 800 }, // tablet on its side
+    { width: 1194, height: 834 },
+    { width: 1024, height: 768 },
+    { width: 1000, height: 1400 }, // the shape of the emulator checks
+    { width: 1920, height: 1200 },
+  ];
+  const statusBars = [0, 20, 24, 28, 50.29, 77]; // StatusBar.currentHeight
+  const tops = [0, 24, 28, 32, 50.29, 77];
+  const bottoms = [0, 24, 32, 48, 56];
+  const propSets = [
+    { sidePanelSettings: { open: false, width: 300 } },
+    { sidePanelSettings: { open: true, width: 300 } },
+    { sidePanelSettings: { open: true, width: 300 }, widget: true },
+  ];
+
+  it('computes what SDK 53 computed, when the window ended at both bars and the insets were 0', () => {
+    let compared = 0;
+
+    windows.forEach((window) => {
+      statusBars.forEach((statusBarCurrentHeight) => {
+        tops.forEach((top) => {
+          bottoms.forEach((bottom) => {
+            const sdk53Window = {
+              width: window.width,
+              height: window.height - top - bottom,
+            };
+            if (sdk53Window.height <= 550) return; // not wide mode on SDK 53
+
+            propSets.forEach((props) => {
+              setDevice({
+                os: 'android',
+                window,
+                insets: { top, bottom },
+                statusBarCurrentHeight,
+              });
+              const now = useAdjustedDimensions({ ...props });
+              expect(now.height).toBe(window.height);
+
+              const sdk53Device = {
+                os: 'android',
+                window: sdk53Window,
+                insets: { top: 0, bottom: 0 },
+                statusBarCurrentHeight,
+              };
+              const sdk53 = before({ ...sdk53Device, props: { ...props } });
+              expectSameDimensions(now, sdk53);
+
+              // PageCapture hands the full page size back in
+              const captureProps = {
+                fullPageWidth: now.fullPageWidth,
+                fullPageHeight: now.fullPageHeight,
+                realFullPageWidth: now.realFullPageWidth,
+                realFullPageMarginHorizontal: now.realFullPageMarginHorizontal,
+                sidePanelSettings: props.sidePanelSettings,
+              };
+              expectSameDimensions(
+                useAdjustedDimensions({ ...captureProps }),
+                before({ ...sdk53Device, props: { ...captureProps } }),
+              );
+
+              compared++;
+            });
+          });
+        });
+      });
+    });
+
+    expect(compared).toBeGreaterThan(1000);
+  });
+
+  const forEachTablet = (check) => {
+    windows.forEach((window) => {
+      [24, 28, 50.29, 77].forEach((statusBarCurrentHeight) => {
+        tops.forEach((top) => {
+          bottoms.forEach((bottom) => {
+            setDevice({
+              os: 'android',
+              window,
+              insets: { top, bottom },
+              statusBarCurrentHeight,
+            });
+            check({
+              window,
+              top,
+              bottom,
+              ...useAdjustedDimensions({
+                sidePanelSettings: { open: false, width: 300 },
+              }),
+            });
+          });
+        });
+      });
+    });
+  };
+
+  it('keeps the page between the toolbar and the navigation bar, as measured on the emulator', () => {
+    forEachTablet(({ window, top, bottom, truePageHeight }) => {
+      expect(truePageHeight).toBeCloseTo(
+        window.height - top - TOOLBAR - bottom,
+        6,
+      );
+    });
+  });
+
+  it('gives the page picture the height of the page, so that it has no empty band', () => {
+    forEachTablet(({ fullPageHeight, truePageHeight }) => {
+      expect(fullPageHeight).toBe(truePageHeight);
+    });
+  });
+
+  // 2560 x 1600 px at 320 dpi, status bar 24: the tablet of the emulator checks
+  [
+    { name: 'gesture navigation', bottom: 32, page: 688 },
+    { name: 'three buttons', bottom: 56, page: 664 },
+  ].forEach(({ name, bottom, page }) => {
+    it(`gives the known values of a tablet on its side: ${name}`, () => {
+      setDevice({
+        os: 'android',
+        window: { width: 1280, height: 800 },
+        insets: { top: 24, bottom },
+        statusBarCurrentHeight: 24,
+      });
+
+      expect(
+        useAdjustedDimensions({
+          sidePanelSettings: { open: true, width: 300 },
+        }),
+      ).toMatchObject({
+        fullPageWidth: 980,
+        fullPageHeight: page,
+        truePageHeight: page,
+        truePageMarginTop: 6,
+      });
+    });
   });
 });

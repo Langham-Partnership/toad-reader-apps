@@ -44,9 +44,18 @@ window.fetch = () => {
   blockedRequests++;
   return Promise.reject(new TypeError('Network request failed'));
 };
+// A blocked XMLHttpRequest ends the way a network error ends one
 window.XMLHttpRequest.prototype.send = function () {
   blockedRequests++;
-  setTimeout(() => this.dispatchEvent(new window.ProgressEvent('error')), 0);
+  setTimeout(() => {
+    Object.defineProperties(this, {
+      readyState: { value: 4, configurable: true },
+      status: { value: 0, configurable: true },
+    });
+    this.dispatchEvent(new window.Event('readystatechange'));
+    this.dispatchEvent(new window.ProgressEvent('error'));
+    this.dispatchEvent(new window.ProgressEvent('loadend'));
+  }, 0);
 };
 window.WebSocket = undefined;
 

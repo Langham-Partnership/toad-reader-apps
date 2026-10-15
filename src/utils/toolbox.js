@@ -142,6 +142,26 @@ export const getPageTop = () =>
 export const getHasNotchInsets = (safeAreaInsets) =>
   Platform.OS !== 'android' && safeAreaInsets.top > 30;
 
+// Where the page picture goes when it leaves through the bottom left corner (ZoomPage.js).
+// On an Android phone: the bottom edge of the screen. ZoomPage adds 20 to y where getPageTop()
+// is -20, which is for any status bar above 20, and Android's are 24 or more. In wide mode on
+// Android ZoomPage takes the top inset off y again and height leaves out the navigation bar
+// (see useAdjustedDimensions): the picture goes where it went when the window ended at both bars.
+export const getCornerSnapshotCoords = ({
+  height,
+  windowHeight,
+  safeAreaInsets,
+  wideMode,
+}) => ({
+  x: 0,
+  y:
+    Platform.OS !== 'android'
+      ? height - safeAreaInsets.bottom
+      : wideMode
+        ? height + safeAreaInsets.top
+        : windowHeight - safeAreaInsets.top,
+});
+
 export const getFullName = (user) =>
   user ? `${user.fullname || ''}`.trim() : ``;
 

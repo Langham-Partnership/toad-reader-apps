@@ -20,13 +20,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { refreshUserData } from '../../utils/syncUserData';
 import parseEpub from '../../utils/parseEpub';
 import {
+  getCornerSnapshotCoords,
+  getIdsFromAccountId,
   getPageCfisKey,
+  getPageTop,
   getToolbarHeight,
+  getToolCfiCounts,
   setStatusBarHidden,
   showConsent,
-  getIdsFromAccountId,
-  getToolCfiCounts,
-  getPageTop,
 } from '../../utils/toolbox';
 import useSetTimeout from '../../hooks/useSetTimeout';
 import useRouterState from '../../hooks/useRouterState';
@@ -405,14 +406,20 @@ const Book = React.memo(
     );
 
     const cornerSnapshotCoords = useMemo(
-      () => ({
-        x: 0,
-        y:
-          Platform.OS === 'android' && !wideMode
-            ? windowHeight - safeAreaInsets.top // the bottom edge of the screen (see useAdjustedDimensions)
-            : height - safeAreaInsets.bottom,
-      }),
-      [height],
+      () =>
+        getCornerSnapshotCoords({
+          height,
+          windowHeight,
+          safeAreaInsets,
+          wideMode,
+        }),
+      [
+        height,
+        windowHeight,
+        safeAreaInsets.top,
+        safeAreaInsets.bottom,
+        wideMode,
+      ],
     );
 
     const prevInPageTurn = usePrevious(inPageTurn);

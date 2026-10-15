@@ -1,16 +1,16 @@
 import { useRef, useEffect } from 'react';
 import Constants from 'expo-constants';
-import { Animated, Easing, StyleSheet, Image, Platform } from 'react-native';
+import { Animated, Easing, Image, Platform, StyleSheet } from 'react-native';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  getSnapshotURI,
-  getToolbarHeight,
-  getStatusBarCurrentHeight,
-  getIsAndroidWithCameraWithinScreen,
   getHasNotchInsets,
+  getIsAndroidWithCameraWithinScreen,
+  getSnapshotURI,
+  getStatusBarCurrentHeight,
+  getToolbarHeight,
 } from '../../utils/toolbox';
 
 import usePrevious from 'react-use/lib/usePrevious';
@@ -197,6 +197,10 @@ const ZoomPage = ({
                     : 0)) *
                 -1,
             },
+        // In wide mode on Android the page ends at the navigation bar (BookPage.js)
+        Platform.OS === 'android' && wideMode
+          ? { bottom: safeAreaInsets.bottom }
+          : null,
       ]}
     >
       <Animated.View style={[styles.snapshot, zoomStyles2]}>

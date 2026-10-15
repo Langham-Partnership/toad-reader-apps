@@ -11,10 +11,10 @@ import BackFunction from '../basic/BackFunction';
 import useRouterState from '../../hooks/useRouterState';
 import {
   getDataOrigin,
-  getReqOptionsWithAdditions,
-  getIdsFromAccountId,
-  safeFetch,
   getHasNotchInsets,
+  getIdsFromAccountId,
+  getReqOptionsWithAdditions,
+  safeFetch,
 } from '../../utils/toolbox';
 import { refreshUserData } from '../../utils/syncUserData';
 import { setCurrentClassroom } from '../../redux/actions';

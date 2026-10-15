@@ -1,7 +1,11 @@
 import { i18n } from 'inline-i18n';
 import { nonEmpty, validUrl, validLTIUrl } from './toolbox';
 import { mediaAvailable } from './media';
-import { youtubeRegex, shortYoutubeRegex } from '../components/major/VideoTool';
+import {
+  getIsYouTubeOrVimeoLink,
+  shortYoutubeRegex,
+  youtubeRegex,
+} from '../components/major/VideoTool';
 
 const hasErrorWithMessageForTime = (time) =>
   nonEmpty(time) &&
@@ -10,6 +14,21 @@ const hasErrorWithMessageForTime = (time) =>
 
 const videoStartEndTimesAreHidden = ({ dataSegment: { videoLink = '' } }) =>
   !(youtubeRegex.test(videoLink) || shortYoutubeRegex.test(videoLink));
+
+// The tool type that the tool editor shows, and whether it can be changed there. A type that
+// is no longer offered (audio, see media.js) has no row in the list: it is shown, but locked.
+export const getToolTypeChoice = ({ toolTypes, toolInfoByType, tool }) => {
+  const index = toolTypes.findIndex(
+    ({ toolType }) => toolType === tool.toolType,
+  );
+  const offered = index !== -1;
+
+  return {
+    selectedOption: offered ? toolTypes[index] : toolInfoByType[tool.toolType],
+    selectedIndex: offered ? index : undefined,
+    disabled: !offered || Object.keys(tool.data || {}).length > 0,
+  };
+};
 
 export const getToolInfo = () => {
   const toolTypes = [
@@ -176,7 +195,13 @@ export const getToolInfo = () => {
             nonEmpty(videoLink) &&
             (!validUrl(videoLink)
               ? i18n('Invalid URL. (Note: https required.)', '', 'enhanced')
-              : false),
+              : !mediaAvailable && !getIsYouTubeOrVimeoLink(videoLink)
+                ? i18n(
+                    'Use a youtube.com/watch, youtu.be or vimeo.com link.',
+                    '',
+                    'enhanced',
+                  )
+                : false),
         },
         {
           name: 'startTime',
@@ -205,6 +230,7 @@ export const getToolInfo = () => {
       ],
       readyToPublish: ({ data: { videoLink, startTime, endTime } }) =>
         validUrl(videoLink) &&
+        (mediaAvailable || getIsYouTubeOrVimeoLink(videoLink)) &&
         !hasErrorWithMessageForTime(startTime) &&
         !hasErrorWithMessageForTime(endTime),
     },
