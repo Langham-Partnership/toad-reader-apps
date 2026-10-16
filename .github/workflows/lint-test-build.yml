@@ -4,7 +4,7 @@ on:
   pull_request:
 
 env:
-  DEFAULT_NODE_VERSION: 20 # FIXME use nvmrc instead
+  DEFAULT_NODE_VERSION: 22 # FIXME use nvmrc instead
 
 permissions:
   contents: read
@@ -17,8 +17,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20, 22]
-        action: [build, lint, test]
+        node-version: [22, 24]
+        action: [build, lint, test, web]
     steps:
       - uses: actions/checkout@v5
         with:

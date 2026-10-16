@@ -6,7 +6,7 @@ import { Select, SelectItem, IndexPath } from '@ui-kitten/components';
 import { v4 as uuidv4 } from 'uuid';
 import { i18n } from 'inline-i18n';
 
-import { getToolInfo } from '../../utils/toolInfo';
+import { getToolInfo, getToolTypeChoice } from '../../utils/toolInfo';
 import useWideMode from '../../hooks/useWideMode';
 import useSetTimeout from '../../hooks/useSetTimeout';
 import useClassroomInfo from '../../hooks/useClassroomInfo';
@@ -140,9 +140,12 @@ const EditTool = React.memo(
       [goUpdateTool, toolTypes],
     );
 
-    const selectedOption = toolTypes.filter(
-      ({ toolType }) => toolType === tool.toolType,
-    )[0];
+    // an existing tool keeps its type, also when that type is no longer offered
+    const {
+      selectedOption,
+      selectedIndex,
+      disabled: toolTypeDisabled,
+    } = getToolTypeChoice({ toolTypes, toolInfoByType, tool });
 
     return (
       <>
@@ -195,7 +198,7 @@ const EditTool = React.memo(
                   onSelect={(opt) =>
                     goUpdateTool({ toolType: opt.toolType, data: {} })
                   }
-                  disabled={Object.keys(tool.data || {}).length > 0}
+                  disabled={toolTypeDisabled}
                 />
               ) : (
                 <Select
@@ -203,10 +206,12 @@ const EditTool = React.memo(
                   label={i18n('Tool type', '', 'enhanced')}
                   value={selectedOption.text}
                   selectedIndex={
-                    new IndexPath(toolTypes.indexOf(selectedOption))
+                    selectedIndex === undefined
+                      ? undefined
+                      : new IndexPath(selectedIndex)
                   }
                   onSelect={onSelectToolType}
-                  disabled={Object.keys(tool.data || {}).length > 0}
+                  disabled={toolTypeDisabled}
                 >
                   {toolTypes.map(({ text }, idx) => (
                     <SelectItem key={idx} title={text} />

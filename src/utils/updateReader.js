@@ -1,26 +1,28 @@
-import { Platform } from "react-native"
-import * as FileSystem from 'expo-file-system'
-import getReaderCode from '../../getReaderCode'
+import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import getReaderCode from '../../getReaderCode';
 
 export const updateReader = async ({ setReaderStatus }) => {
+  if (Platform.OS === 'web') return;
 
-  if(Platform.OS === 'web') return
+  const readerDestinationPath = `${FileSystem.documentDirectory}reader/index.html`;
 
-  const readerDestinationPath = `${FileSystem.documentDirectory}reader/index.html`
+  const { size } = await FileSystem.getInfoAsync(readerDestinationPath);
+  const readerCodeSizeInBytes =
+    encodeURI(getReaderCode()).split(/%..|./).length - 1;
 
-  const { size } = await FileSystem.getInfoAsync(readerDestinationPath)
-  const readerCodeSizeInBytes = encodeURI(getReaderCode()).split(/%..|./).length - 1
+  if (size !== readerCodeSizeInBytes) {
+    setReaderStatus({ readerStatus: 'updating' });
+    console.log('Updating reader...');
 
-  if(size !== readerCodeSizeInBytes) {
-    setReaderStatus({ readerStatus: "updating" })
-    console.log('Updating reader...')
+    await FileSystem.makeDirectoryAsync(
+      readerDestinationPath.replace(/\/[^/]*$/, ''),
+      { intermediates: true },
+    );
+    await FileSystem.writeAsStringAsync(readerDestinationPath, getReaderCode());
 
-    await FileSystem.makeDirectoryAsync(readerDestinationPath.replace(/\/[^/]*$/, ''), { intermediates: true })
-    await FileSystem.writeAsStringAsync(readerDestinationPath, getReaderCode())
-
-    console.log('...reader updated.')
+    console.log('...reader updated.');
   }
 
-  setReaderStatus({ readerStatus: "ready" })
-
-}
+  setReaderStatus({ readerStatus: 'ready' });
+};

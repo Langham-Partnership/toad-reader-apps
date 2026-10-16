@@ -1,6 +1,6 @@
 # Installation
 
-1. `npm i` (using Node 20)
+1. `npm i` (using Node 22)
 2. Add tenants > toadreader from the zip file
 3. In `toadreader/app.js`, update the `DEV_DATA_ORIGIN_OVERRIDE` value with server's IP address
 4. `npm run change-tenant toadreader`

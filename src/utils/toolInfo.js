@@ -1,17 +1,34 @@
-import { i18n } from "inline-i18n"
-import { nonEmpty, validUrl, validLTIUrl } from './toolbox'
-import { youtubeRegex, shortYoutubeRegex } from '../components/major/VideoTool'
+import { i18n } from 'inline-i18n';
+import { nonEmpty, validUrl, validLTIUrl } from './toolbox';
+import { mediaAvailable } from './media';
+import {
+  getIsYouTubeOrVimeoLink,
+  shortYoutubeRegex,
+  youtubeRegex,
+} from '../components/major/VideoTool';
 
-const hasErrorWithMessageForTime = time => (
-  nonEmpty(time)
-  && !/^(?:[0-9]+)(?::[0-9]+)$/.test(time)
-  && i18n("Invalid time.", "", "enhanced")
-)
+const hasErrorWithMessageForTime = (time) =>
+  nonEmpty(time) &&
+  !/^(?:[0-9]+)(?::[0-9]+)$/.test(time) &&
+  i18n('Invalid time.', '', 'enhanced');
 
-const videoStartEndTimesAreHidden = ({ dataSegment: { videoLink='' } }) => !(
-  youtubeRegex.test(videoLink)
-  || shortYoutubeRegex.test(videoLink)
-)
+const videoStartEndTimesAreHidden = ({ dataSegment: { videoLink = '' } }) =>
+  !(youtubeRegex.test(videoLink) || shortYoutubeRegex.test(videoLink));
+
+// The tool type that the tool editor shows, and whether it can be changed there. A type that
+// is no longer offered (audio, see media.js) has no row in the list: it is shown, but locked.
+export const getToolTypeChoice = ({ toolTypes, toolInfoByType, tool }) => {
+  const index = toolTypes.findIndex(
+    ({ toolType }) => toolType === tool.toolType,
+  );
+  const offered = index !== -1;
+
+  return {
+    selectedOption: offered ? toolTypes[index] : toolInfoByType[tool.toolType],
+    selectedIndex: offered ? index : undefined,
+    disabled: !offered || Object.keys(tool.data || {}).length > 0,
+  };
+};
 
 export const getToolInfo = () => {
   const toolTypes = [
@@ -21,12 +38,12 @@ export const getToolInfo = () => {
         name: 'lead-pencil',
         pack: 'materialCommunity',
       },
-      text: i18n("Notes insert", "", "enhanced"),
+      text: i18n('Notes insert', '', 'enhanced'),
       dataStructure: [
         {
           name: 'content',
           type: 'text',
-          placeholder: i18n("Enter your notes here.", "", "enhanced"),
+          placeholder: i18n('Enter your notes here.', '', 'enhanced'),
           required: true,
         },
       ],
@@ -37,7 +54,7 @@ export const getToolInfo = () => {
       icon: {
         name: 'checkbox',
       },
-      text: i18n("Quiz", "", "enhanced"),
+      text: i18n('Quiz', '', 'enhanced'),
       warnOfUpdate: true,
       dataStructure: [
         {
@@ -46,57 +63,57 @@ export const getToolInfo = () => {
             {
               name: 'question',
               type: 'string',
-              label: i18n("Question", "", "enhanced"),
+              label: i18n('Question', '', 'enhanced'),
               required: true,
             },
             {
               name: 'answers',
               type: ['choice'],
-              label: i18n("Answers", "", "enhanced"),
+              label: i18n('Answers', '', 'enhanced'),
               required: true,
               maxItems: 10,
             },
             {
               name: 'shuffle',
               type: 'boolean',
-              label: i18n("Shuffle answers on each attempt", "", "enhanced"),
+              label: i18n('Shuffle answers on each attempt', '', 'enhanced'),
             },
           ],
-          addLabel: i18n("Add a question", "", "enhanced"),
+          addLabel: i18n('Add a question', '', 'enhanced'),
           maxItems: 50,
         },
         {
           name: 'shuffle',
           type: 'boolean',
-          label: i18n("Shuffle questions on each attempt", "", "enhanced"),
+          label: i18n('Shuffle questions on each attempt', '', 'enhanced'),
         },
         {
           name: 'limitAttempts',
           type: 'boolean',
-          label: i18n("Limit number of attempts", "", "enhanced"),
+          label: i18n('Limit number of attempts', '', 'enhanced'),
         },
         {
           name: 'maxAttempts',
           type: 'string',
-          label: i18n("Maximum number of attempts", "", "enhanced"),
+          label: i18n('Maximum number of attempts', '', 'enhanced'),
           placeholder: '3',
           isHidden: ({ dataSegment: { limitAttempts } }) => !limitAttempts,
         },
       ],
       transformData: ({ data }) => {
-        data.maxAttempts = parseInt(data.maxAttempts, 10)
+        data.maxAttempts = parseInt(data.maxAttempts, 10);
       },
-      readyToPublish: ({ data: { questions=[] } }) => (
-        questions.length > 0
-        && questions.every(({ question, answers=[], answersSelection }) => (
-          nonEmpty(question)
-          && answers.length > 0
-          && answers.every(answer => nonEmpty(answer))
-          && typeof answersSelection === 'number'
-          && answersSelection >= 0
-          && answersSelection < answers.length
-        ))
-      ),
+      readyToPublish: ({ data: { questions = [] } }) =>
+        questions.length > 0 &&
+        questions.every(
+          ({ question, answers = [], answersSelection }) =>
+            nonEmpty(question) &&
+            answers.length > 0 &&
+            answers.every((answer) => nonEmpty(answer)) &&
+            typeof answersSelection === 'number' &&
+            answersSelection >= 0 &&
+            answersSelection < answers.length,
+        ),
     },
     {
       toolType: 'LTI',
@@ -104,52 +121,57 @@ export const getToolInfo = () => {
         name: 'wrench',
         pack: 'materialCommunity',
       },
-      text: i18n("Learning (LTI) tool", "", "enhanced"),
+      text: i18n('Learning (LTI) tool', '', 'enhanced'),
       dataStructure: [
         {
           name: 'url',
           type: 'string',
-          label: i18n("Launch URL", "", "enhanced"),
-          placeholder: i18n("Eg. {{example}}", "", "enhanced", { example: "https://www.some-lti-tool-provider.com/tools/123" }),
+          label: i18n('Launch URL', '', 'enhanced'),
+          placeholder: i18n('Eg. {{example}}', '', 'enhanced', {
+            example: 'https://www.some-lti-tool-provider.com/tools/123',
+          }),
           isHiddenWithMessage: ({ data, isDefaultClassroom }) => {
-            const { fromDefaultClassroom } = data || {}
+            const { fromDefaultClassroom } = data || {};
 
             return (
-              fromDefaultClassroom
-              && !isDefaultClassroom
-              && i18n("Created by the publisher. You may remove this tool, but you may not edit it.", "", "enhanced")
-            )
+              fromDefaultClassroom &&
+              !isDefaultClassroom &&
+              i18n(
+                'Created by the publisher. You may remove this tool, but you may not edit it.',
+                '',
+                'enhanced',
+              )
+            );
           },
           required: true,
-          hasErrorWithMessage: ({ data: { url, fromDefaultClassroom }, classroom }) => (
-            nonEmpty(url)
-            && (
-              !validUrl(url)
-                ? (
-                  i18n("Invalid URL. (Note: https required.)", "", "enhanced")
-                )
-                : (
-                  !validLTIUrl({ url, fromDefaultClassroom, classroom })
-                    ? i18n("There is not a published LTI configuration for this domain.", "", "enhanced")
-                    : false
-                )
-            )
-          ),
+          hasErrorWithMessage: ({
+            data: { url, fromDefaultClassroom },
+            classroom,
+          }) =>
+            nonEmpty(url) &&
+            (!validUrl(url)
+              ? i18n('Invalid URL. (Note: https required.)', '', 'enhanced')
+              : !validLTIUrl({ url, fromDefaultClassroom, classroom })
+                ? i18n(
+                    'There is not a published LTI configuration for this domain.',
+                    '',
+                    'enhanced',
+                  )
+                : false),
         },
         {
           name: 'instructions',
           type: 'text',
-          label: i18n("Instructions", "", "enhanced"),
+          label: i18n('Instructions', '', 'enhanced'),
         },
       ],
       transformData: ({ data, isDefaultClassroom }) => {
-        if(isDefaultClassroom) {
-          data.fromDefaultClassroom = true
+        if (isDefaultClassroom) {
+          data.fromDefaultClassroom = true;
         }
       },
-      readyToPublish: ({ data: { url, fromDefaultClassroom }, classroom }) => (
-        validLTIUrl({ url, fromDefaultClassroom, classroom })
-      ),
+      readyToPublish: ({ data: { url, fromDefaultClassroom }, classroom }) =>
+        validLTIUrl({ url, fromDefaultClassroom, classroom }),
     },
     {
       toolType: 'VIDEO',
@@ -157,75 +179,90 @@ export const getToolInfo = () => {
         name: 'youtube-play',
         pack: 'fontAwesome',
       },
-      text: i18n("Video", "", "enhanced"),
+      text: i18n('Video', '', 'enhanced'),
       dataStructure: [
         {
           name: 'videoLink',
           type: 'string',
-          label: i18n("YouTube, Vimeo, MP4 or WebM link", "", "enhanced"),
-          placeholder: i18n("Eg. {{example}}", "", "enhanced", { example: "https://www.youtube.com/watch?v=Y80wHFoYrrQ" }),
+          label: mediaAvailable
+            ? i18n('YouTube, Vimeo, MP4 or WebM link', '', 'enhanced')
+            : i18n('YouTube or Vimeo link', '', 'enhanced'),
+          placeholder: i18n('Eg. {{example}}', '', 'enhanced', {
+            example: 'https://www.youtube.com/watch?v=Y80wHFoYrrQ',
+          }),
           required: true,
-          hasErrorWithMessage: ({ data: { videoLink } }) => (
-            nonEmpty(videoLink)
-            && (
-              !validUrl(videoLink)
-                ? i18n("Invalid URL. (Note: https required.)", "", "enhanced")
-                : false
-            )
-          ),
+          hasErrorWithMessage: ({ data: { videoLink } }) =>
+            nonEmpty(videoLink) &&
+            (!validUrl(videoLink)
+              ? i18n('Invalid URL. (Note: https required.)', '', 'enhanced')
+              : !mediaAvailable && !getIsYouTubeOrVimeoLink(videoLink)
+                ? i18n(
+                    'Use a youtube.com/watch, youtu.be or vimeo.com link.',
+                    '',
+                    'enhanced',
+                  )
+                : false),
         },
         {
           name: 'startTime',
           type: 'string',
           variant: 'short',
-          label: i18n("Start time (optional)", "", "enhanced"),
-          placeholder: i18n("Eg. {{example}}", "", "enhanced", { example: "3:12" }),
-          hasErrorWithMessage: ({ data: { startTime } }) => hasErrorWithMessageForTime(startTime),
+          label: i18n('Start time (optional)', '', 'enhanced'),
+          placeholder: i18n('Eg. {{example}}', '', 'enhanced', {
+            example: '3:12',
+          }),
+          hasErrorWithMessage: ({ data: { startTime } }) =>
+            hasErrorWithMessageForTime(startTime),
           isHidden: videoStartEndTimesAreHidden,
         },
         {
           name: 'endTime',
           type: 'string',
           variant: 'short',
-          label: i18n("End time (optional)", "", "enhanced"),
-          placeholder: i18n("Eg. {{example}}", "", "enhanced", { example: "12:14" }),
-          hasErrorWithMessage: ({ data: { endTime } }) => hasErrorWithMessageForTime(endTime),
+          label: i18n('End time (optional)', '', 'enhanced'),
+          placeholder: i18n('Eg. {{example}}', '', 'enhanced', {
+            example: '12:14',
+          }),
+          hasErrorWithMessage: ({ data: { endTime } }) =>
+            hasErrorWithMessageForTime(endTime),
           isHidden: videoStartEndTimesAreHidden,
         },
       ],
-      readyToPublish: ({ data: { videoLink, startTime, endTime } }) => (
-        validUrl(videoLink)
-        && !hasErrorWithMessageForTime(startTime)
-        && !hasErrorWithMessageForTime(endTime)
-      ),
+      readyToPublish: ({ data: { videoLink, startTime, endTime } }) =>
+        validUrl(videoLink) &&
+        (mediaAvailable || getIsYouTubeOrVimeoLink(videoLink)) &&
+        !hasErrorWithMessageForTime(startTime) &&
+        !hasErrorWithMessageForTime(endTime),
     },
     {
       toolType: 'QUESTION',
-      icon: ({ isDiscussion }={}) => ({
+      icon: ({ isDiscussion } = {}) => ({
         name: isDiscussion ? 'question-answer' : 'comment-question',
         pack: isDiscussion ? 'material' : 'materialCommunity',
       }),
-      text: i18n("Question", "", "enhanced"),
+      text: i18n('Question', '', 'enhanced'),
       warnOfUpdate: true,
       dataStructure: [
         {
           name: 'question',
           type: 'string',
-          label: ({ dataSegment }) => (
+          label: ({ dataSegment }) =>
             dataSegment.isDiscussion
-              ? i18n("Discussion question", "", "enhanced")
-              : i18n("Reflection question", "", "enhanced")
-          ),
+              ? i18n('Discussion question', '', 'enhanced')
+              : i18n('Reflection question', '', 'enhanced'),
           required: true,
         },
         {
           name: 'isDiscussion',
           type: 'boolean',
-          label: i18n("Classroom discussion style", "", "enhanced"),
-          isHiddenWithMessage: ({ isDefaultClassroom }) => (
-            isDefaultClassroom
-            && i18n("Classrooms will also have the option of turning this reflection question into a discussion.", "", "enhanced")
-          ),
+          label: i18n('Classroom discussion style', '', 'enhanced'),
+          isHiddenWithMessage: ({ isDefaultClassroom }) =>
+            isDefaultClassroom &&
+            i18n(
+              'Classrooms will also have the option of turning this reflection question into a discussion.',
+              '',
+              'enhanced',
+            ),
         },
       ],
       readyToPublish: ({ data: { question } }) => nonEmpty(question),
@@ -236,35 +273,34 @@ export const getToolInfo = () => {
         name: 'poll',
         pack: 'materialCommunity',
       },
-      text: i18n("Poll", "", "enhanced"),
+      text: i18n('Poll', '', 'enhanced'),
       warnOfUpdate: true,
       dataStructure: [
         {
           name: 'question',
           type: 'string',
-          label: i18n("Question", "", "enhanced"),
+          label: i18n('Question', '', 'enhanced'),
           required: true,
         },
         {
           name: 'choices',
           type: ['freechoice'],
-          label: i18n("Choices", "", "enhanced"),
+          label: i18n('Choices', '', 'enhanced'),
           required: true,
           maxItems: 20,
         },
       ],
-      readyToPublish: ({ data: { question, choices=[] } }) => (
-        nonEmpty(question)
-        && choices.length >= 2
-        && choices.every(choice => nonEmpty(choice))
-      ),
+      readyToPublish: ({ data: { question, choices = [] } }) =>
+        nonEmpty(question) &&
+        choices.length >= 2 &&
+        choices.every((choice) => nonEmpty(choice)),
     },
     {
       toolType: 'DOCUMENT',
       icon: {
         name: 'document',
       },
-      text: i18n("Document", "", "enhanced"),
+      text: i18n('Document', '', 'enhanced'),
       dataStructure: [
         {
           name: 'document',
@@ -284,11 +320,11 @@ export const getToolInfo = () => {
       icon: {
         name: 'image',
       },
-      text: i18n("Images", "", "enhanced"),
+      text: i18n('Images', '', 'enhanced'),
       dataStructure: [
         {
           name: 'images',
-          label: i18n("Add images to slideshow", "", "enhanced"),
+          label: i18n('Add images to slideshow', '', 'enhanced'),
           type: 'files',
           fileTypes: [
             'image/png',
@@ -307,44 +343,50 @@ export const getToolInfo = () => {
       icon: {
         name: 'musical-note',
       },
-      text: i18n("Audio", "", "enhanced"),
+      text: i18n('Audio', '', 'enhanced'),
       dataStructure: [
         {
           name: 'instructions',
           type: 'boolean',
-          isHiddenWithMessage: ({ dataSegment: { audioFile, audioLink } }) => (
-            (audioLink && i18n("(To rather upload an MP3 file, clear out the link field.)", "", "enhanced"))
-            || (!audioFile && i18n("You may either upload an MP3 file or provide a link to one already published on the internet.", "", "enhanced"))
-            || i18n("(Remove the chosen file if you would rather provide a link to an MP3.)", "", "enhanced")
-          ),
+          isHiddenWithMessage: ({ dataSegment: { audioFile, audioLink } }) =>
+            (audioLink &&
+              i18n(
+                '(To rather upload an MP3 file, clear out the link field.)',
+                '',
+                'enhanced',
+              )) ||
+            (!audioFile &&
+              i18n(
+                'You may either upload an MP3 file or provide a link to one already published on the internet.',
+                '',
+                'enhanced',
+              )) ||
+            i18n(
+              '(Remove the chosen file if you would rather provide a link to an MP3.)',
+              '',
+              'enhanced',
+            ),
         },
         {
           name: 'audioFile',
           type: 'file',
-          fileTypes: [
-            'audio/mpeg',
-          ],
+          fileTypes: ['audio/mpeg'],
           isHidden: ({ dataSegment: { audioLink } }) => audioLink,
         },
         {
           name: 'audioLink',
           type: 'string',
-          label: i18n("MP3 link", "", "enhanced"),
+          label: i18n('MP3 link', '', 'enhanced'),
           isHidden: ({ dataSegment: { audioFile } }) => audioFile,
-          hasErrorWithMessage: ({ data: { audioLink } }) => (
-            nonEmpty(audioLink)
-            && (
-              !validUrl(audioLink)
-                ? i18n("Invalid URL. (Note: https required.)", "", "enhanced")
-                : false
-            )
-          ),
+          hasErrorWithMessage: ({ data: { audioLink } }) =>
+            nonEmpty(audioLink) &&
+            (!validUrl(audioLink)
+              ? i18n('Invalid URL. (Note: https required.)', '', 'enhanced')
+              : false),
         },
       ],
-      readyToPublish: ({ data: { audioFile, audioLink } }) => (
-        audioFile
-        || validUrl(audioLink)
-      ),
+      readyToPublish: ({ data: { audioFile, audioLink } }) =>
+        audioFile || validUrl(audioLink),
     },
     {
       toolType: 'SKETCH',
@@ -352,16 +394,16 @@ export const getToolInfo = () => {
         name: 'draw',
         pack: 'materialCommunity',
       },
-      text: i18n("Sketch", "", "enhanced"),
+      text: i18n('Sketch', '', 'enhanced'),
       dataStructure: [
         {
           name: 'instructions',
           type: 'string',
-          label: i18n("Instructions (optional)", "", "enhanced"),
+          label: i18n('Instructions (optional)', '', 'enhanced'),
         },
         {
           name: 'background',
-          label: i18n("Add sketch pad background", "", "enhanced"),
+          label: i18n('Add sketch pad background', '', 'enhanced'),
           type: 'file',
           fileTypes: [
             'image/png',
@@ -374,21 +416,24 @@ export const getToolInfo = () => {
         {
           name: 'requireTabletSize',
           type: 'boolean',
-          label: i18n("Require tablet size or larger", "", "enhanced"),
+          label: i18n('Require tablet size or larger', '', 'enhanced'),
         },
       ],
       readyToPublish: () => true,
     },
-  ]
+  ];
 
-  const toolInfoByType = {}
+  const toolInfoByType = {};
 
   toolTypes.forEach(({ toolType, ...otherParams }) => {
-    toolInfoByType[toolType] = otherParams
-  })
+    toolInfoByType[toolType] = otherParams;
+  });
 
   return {
-    toolTypes,
+    // an audio tool cannot be chosen while there is nothing to play it with
+    toolTypes: toolTypes.filter(
+      ({ toolType }) => mediaAvailable || toolType !== 'AUDIO',
+    ),
     toolInfoByType,
-  }
-}
+  };
+};

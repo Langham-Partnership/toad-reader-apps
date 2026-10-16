@@ -1,17 +1,13 @@
-import React from "react"
-import { ScrollView, View, StyleSheet } from "react-native"
+import React from 'react';
+import { ScrollView, View, StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
   scrollCover: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
-})
+});
 
-const EnhancedAnalyticsScrollContainer = React.memo(({
-  chart,
-  minWidth,
-}) => {
-
+const EnhancedAnalyticsScrollContainer = React.memo(({ chart, minWidth }) => {
   return (
     <ScrollView
       horizontal={true}
@@ -22,7 +18,7 @@ const EnhancedAnalyticsScrollContainer = React.memo(({
       {chart}
       <View style={styles.scrollCover} />
     </ScrollView>
-  )
-})
+  );
+});
 
-export default EnhancedAnalyticsScrollContainer
+export default EnhancedAnalyticsScrollContainer;

@@ -1,46 +1,56 @@
-import { Platform } from "react-native"
-import * as FileSystem from 'expo-file-system'
-import { safeFetch } from "./toolbox"
+import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import { safeFetch } from './toolbox';
 
-export default async (remoteUri, localUri, { skipIfExists, headers }={}, doSafeFetch) => {
+export default async (
+  remoteUri,
+  localUri,
+  { skipIfExists, headers } = {},
+  doSafeFetch,
+) => {
+  if (Platform.OS === 'web') return;
 
-  if(Platform.OS === 'web') return
-
-  if(skipIfExists) {
-    const localUriInfo = await FileSystem.getInfoAsync(localUri)
-    if(localUriInfo.exists) return
+  if (skipIfExists) {
+    const localUriInfo = await FileSystem.getInfoAsync(localUri);
+    if (localUriInfo.exists) return;
   }
 
-  console.log(`Attempting to download ${remoteUri} to ${localUri}...`)
+  console.log(`Attempting to download ${remoteUri} to ${localUri}...`);
 
-  const localDir = `${localUri.replace(/\/[^/]*$/, '')}`
+  const localDir = `${localUri.replace(/\/[^/]*$/, '')}`;
   // const localDirInfo = await FileSystem.getInfoAsync(localDir)
 
   // if(!localDirInfo.exists) {
   try {
-    await FileSystem.makeDirectoryAsync(localDir, { intermediates: true })
-  } catch(e) {  // eslint-disable-line @typescript-eslint/no-unused-vars
+    await FileSystem.makeDirectoryAsync(localDir, { intermediates: true });
+  } catch {
     /* empty */
   }
 
-  let success
-  if((headers || {}).cookie && doSafeFetch) {
-    const response = await safeFetch(remoteUri, { headers, credentials: 'omit' })
-    if(response.status < 400) {
-      await FileSystem.writeAsStringAsync(localUri, await response.text())
-      success = true
+  let success;
+  if ((headers || {}).cookie && doSafeFetch) {
+    const response = await safeFetch(remoteUri, {
+      headers,
+      credentials: 'omit',
+    });
+    if (response.status < 400) {
+      await FileSystem.writeAsStringAsync(localUri, await response.text());
+      success = true;
     }
   } else {
-    const { status } = await FileSystem.downloadAsync(remoteUri, localUri, { headers })
-    success = status >= 200 && status < 300
+    const { status } = await FileSystem.downloadAsync(remoteUri, localUri, {
+      headers,
+    });
+    success = status >= 200 && status < 300;
   }
 
-  if(!success) {
-    await FileSystem.deleteAsync(localUri, { idempotent: true })
+  if (!success) {
+    await FileSystem.deleteAsync(localUri, { idempotent: true });
   }
 
-  console.log(`...download from ${remoteUri} to ${localUri}: ${success ? `successful` : `failed`}.`)
+  console.log(
+    `...download from ${remoteUri} to ${localUri}: ${success ? `successful` : `failed`}.`,
+  );
 
-  return success
-
-}
+  return success;
+};

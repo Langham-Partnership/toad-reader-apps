@@ -1,23 +1,27 @@
 import { i18n } from 'inline-i18n';
-import { useState, useRef, useEffect, useCallback } from "react"
-import { Platform, View } from "react-native"
-import { bindActionCreators } from "redux"
-import { connect } from "react-redux"
-import * as FileSystem from 'expo-file-system'
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Platform, View } from 'react-native';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+import * as FileSystem from 'expo-file-system/legacy';
 
-import { getDisplaySettingsObj, getPageCfisKey, getSnapshotURI } from '../../utils/toolbox'
-import useInstanceValue from "../../hooks/useInstanceValue"
-import { postMessage } from "../../utils/postMessage"
-import takeSnapshot from "../../utils/takeSnapshot"
-import useSetTimeout from "../../hooks/useSetTimeout"
-import usePageSize from "../../hooks/usePageSize"
-import useRouterState from "../../hooks/useRouterState"
-import useAdjustedDimensions from "../../hooks/useAdjustedDimensions"
-import { addSpinePageCfis } from "../../redux/actions"
-import useDidUpdate from "../../hooks/useDidUpdate"
+import {
+  getDisplaySettingsObj,
+  getPageCfisKey,
+  getSnapshotURI,
+} from '../../utils/toolbox';
+import useInstanceValue from '../../hooks/useInstanceValue';
+import { postMessage } from '../../utils/postMessage';
+import takeSnapshot from '../../utils/takeSnapshot';
+import useSetTimeout from '../../hooks/useSetTimeout';
+import usePageSize from '../../hooks/usePageSize';
+import useRouterState from '../../hooks/useRouterState';
+import useAdjustedDimensions from '../../hooks/useAdjustedDimensions';
+import { addSpinePageCfis } from '../../redux/actions';
+import useDidUpdate from '../../hooks/useDidUpdate';
 
-import PageWebView from "./PageWebView"
-import BookTools from "./BookTools"
+import PageWebView from './PageWebView';
+import BookTools from './BookTools';
 
 const getDefiniteDimensionsStyle = (width, height) => ({
   position: 'absolute',
@@ -29,7 +33,7 @@ const getDefiniteDimensionsStyle = (width, height) => ({
   height,
   minHeight: height,
   maxHeight: height,
-})
+});
 
 const PageCapture = ({
   bookId,
@@ -50,32 +54,32 @@ const PageCapture = ({
 
   addSpinePageCfis,
 }) => {
+  const { historyPush } = useRouterState();
 
-  const { historyPush } = useRouterState()
+  const [toolSpots, setToolSpots] = useState([]);
 
-  const [ toolSpots, setToolSpots ] = useState([])
+  const loadSpineAndGetPagesInfoAlreadyCalled = useRef(false);
+  const getCfisOrShiftAndSnap = useRef();
+  const pageIndexInSpine = useRef(0);
+  const pageCfis = useRef([]);
+  const toolSpotSets = useRef({});
+  const unmounted = useRef(false);
+  const webView = useRef();
+  const view = useRef();
 
-  const loadSpineAndGetPagesInfoAlreadyCalled = useRef(false)
-  const getCfisOrShiftAndSnap = useRef()
-  const pageIndexInSpine = useRef(0)
-  const pageCfis = useRef([])
-  const toolSpotSets = useRef({})
-  const unmounted = useRef(false)
-  const webView = useRef()
-  const view = useRef()
+  let { truePageHeight, truePageMarginTop } = useAdjustedDimensions({
+    fullPageWidth: width,
+    fullPageHeight: height,
+    sidePanelSettings,
+  });
+  const { pageWidth, pageHeight } = usePageSize({ sidePanelSettings });
 
-  let { truePageHeight, truePageMarginTop } = useAdjustedDimensions({ fullPageWidth: width, fullPageHeight: height, sidePanelSettings })
-  const { pageWidth, pageHeight } = usePageSize({ sidePanelSettings })
+  const getProcessingPaused = useInstanceValue(processingPaused);
 
-  const getProcessingPaused = useInstanceValue(processingPaused)
+  const stopProcessing = () =>
+    getProcessingPaused() || unmounted.current || !webView.current;
 
-  const stopProcessing = () => (
-    getProcessingPaused()
-    || unmounted.current
-    || !webView.current
-  )
-
-  const [ setDelayTimeout ] = useSetTimeout({ fireOnUnmount: true })
+  const [setDelayTimeout] = useSetTimeout({ fireOnUnmount: true });
 
   const uriAsKey = getSnapshotURI({
     bookId,
@@ -84,169 +88,161 @@ const PageCapture = ({
     height,
     displaySettings,
     spineInlineToolsHash,
-  })
+  });
 
-  useEffect(
-    () => {
-      loadSpineAndGetPagesInfoAlreadyCalled.current = false
-      getCfisOrShiftAndSnap.current = null
-      pageIndexInSpine.current = 0
-    },
-    [ uriAsKey ],
-  )
+  useEffect(() => {
+    loadSpineAndGetPagesInfoAlreadyCalled.current = false;
+    getCfisOrShiftAndSnap.current = null;
+    pageIndexInSpine.current = 0;
+  }, [uriAsKey]);
 
-  useEffect(
-    () => {
-      if(stopProcessing()) return
+  useEffect(() => {
+    if (stopProcessing()) return;
 
-      if(getCfisOrShiftAndSnap.current) {
-        getCfisOrShiftAndSnap.current()
+    if (getCfisOrShiftAndSnap.current) {
+      getCfisOrShiftAndSnap.current();
+    } else {
+      if (loadSpineAndGetPagesInfoAlreadyCalled.current) return;
 
-      } else {
-        if(loadSpineAndGetPagesInfoAlreadyCalled.current) return
+      postMessage(webView.current, 'loadSpineAndGetPagesInfo', {
+        spineIdRef,
+        allottedMS: 100,
+        minimumPagesToFetch: 1,
+        toolCfiCounts: toolCfiCountsInThisSpine,
+        width: realWidth,
+      });
 
-        postMessage(webView.current, 'loadSpineAndGetPagesInfo', {
-          spineIdRef,
-          allottedMS: 100,
-          minimumPagesToFetch: 1,
-          toolCfiCounts: toolCfiCountsInThisSpine,
-          width: realWidth,
-        })
+      pageCfis.current = [];
+      loadSpineAndGetPagesInfoAlreadyCalled.current = true;
+    }
+  }, [uriAsKey, processingPaused]);
 
-        pageCfis.current = []
-        loadSpineAndGetPagesInfoAlreadyCalled.current = true
+  useEffect(() => () => (unmounted.current = true), []);
+
+  useDidUpdate(() => {
+    (async () => {
+      //// STEP 3 ////
+
+      const uri = getSnapshotURI({
+        bookId,
+        spineIdRef,
+        width,
+        height,
+        displaySettings,
+        spineInlineToolsHash,
+        pageIndexInSpine: pageIndexInSpine.current,
+      });
+
+      await takeSnapshot({
+        view: view.current,
+        uri,
+        width: pageWidth,
+        height: pageHeight,
+        viewWidth: width,
+        viewHeight: height,
+        pageIndexInSpine: pageIndexInSpine.current,
+        stopProcessing,
+      });
+
+      if (stopProcessing()) return;
+
+      pageIndexInSpine.current++;
+
+      if (getCfisOrShiftAndSnap.current) {
+        getCfisOrShiftAndSnap.current();
       }
-    },
-    [ uriAsKey, processingPaused ],
-  )
-
-  useEffect(() => () => unmounted.current = true, [])
-
-  useDidUpdate(
-    () => {
-      (async () => {
-
-        //// STEP 3 ////
-
-        const uri = getSnapshotURI({
-          bookId,
-          spineIdRef,
-          width,
-          height,
-          displaySettings,
-          spineInlineToolsHash,
-          pageIndexInSpine: pageIndexInSpine.current,
-        })
-
-        await takeSnapshot({
-          view: view.current,
-          uri,
-          width: pageWidth,
-          height: pageHeight,
-          viewWidth: width,
-          viewHeight: height,
-          pageIndexInSpine: pageIndexInSpine.current,
-          stopProcessing,
-        })
-
-        if(stopProcessing()) return
-
-        pageIndexInSpine.current++
-
-        if(getCfisOrShiftAndSnap.current) {
-          getCfisOrShiftAndSnap.current()
-        }
-
-      })()
-    },
-    [ toolSpots ],
-  )
+    })();
+  }, [toolSpots]);
 
   const onError = useCallback(
-    e => {
-      console.log('ERROR: PageCapture webview had an error on load', uriAsKey, e)
-      reportFinished(uriAsKey)
+    (e) => {
+      console.log(
+        'ERROR: PageCapture webview had an error on load',
+        uriAsKey,
+        e,
+      );
+      reportFinished(uriAsKey);
     },
-    [ reportFinished, uriAsKey ],
-  )
+    [reportFinished, uriAsKey],
+  );
 
   const onMessageEvent = async (webView2, data) => {
-    if(webView2 !== webView.current || stopProcessing()) return // just in case
+    if (webView2 !== webView.current || stopProcessing()) return; // just in case
 
-    switch(data.identifier) {
-
+    switch (data.identifier) {
       case 'pagesInfo': {
+        if (spineIdRef !== data.payload.spineIdRef) return; // just in case
 
-        if(spineIdRef !== data.payload.spineIdRef) return // just in case
+        reportInfoOrCapture(uriAsKey);
 
-        reportInfoOrCapture(uriAsKey)
-
-        if(data.payload.startIndex !== pageCfis.current.length) {
-          historyPush("/error", {
-            message: i18n("Invalid book."),
-          })
-          reportFinished(uriAsKey)
+        if (data.payload.startIndex !== pageCfis.current.length) {
+          historyPush('/error', {
+            message: i18n('Invalid book.'),
+          });
+          reportFinished(uriAsKey);
         }
 
-        pageCfis.current = [
-          ...pageCfis.current,
-          ...data.payload.pageCfis,
-        ]
+        pageCfis.current = [...pageCfis.current, ...data.payload.pageCfis];
 
-        if(!data.payload.completed) {
-          getCfisOrShiftAndSnap.current = () => postMessage(webView.current, 'continueToGetPagesInfo', {
-            spineIdRef,
-            startIndex: pageCfis.current.length,
-            allottedMS: 100,
-            minimumPagesToFetch: 1,
-            width: realWidth,
-          })
-          if(!stopProcessing()) getCfisOrShiftAndSnap.current()
-          return
+        if (!data.payload.completed) {
+          getCfisOrShiftAndSnap.current = () =>
+            postMessage(webView.current, 'continueToGetPagesInfo', {
+              spineIdRef,
+              startIndex: pageCfis.current.length,
+              allottedMS: 100,
+              minimumPagesToFetch: 1,
+              width: realWidth,
+            });
+          if (!stopProcessing()) getCfisOrShiftAndSnap.current();
+          return;
         }
 
-        toolSpotSets.current = data.payload.toolSpotSets
+        toolSpotSets.current = data.payload.toolSpotSets;
 
-        const numPages = pageCfis.current.length
-        const platformOffset = Platform.OS === 'ios' && realWidth%2 === 1 ? 1 : 0
+        const numPages = pageCfis.current.length;
+        const platformOffset =
+          Platform.OS === 'ios' && realWidth % 2 === 1 ? 1 : 0;
 
-        if(Platform.OS === 'android') {
+        if (Platform.OS === 'android') {
           // Delay to ensure render of the initial page in spine
           // since this is not covered by the dup check in takeSnapshot.
-          await new Promise(resolve => setDelayTimeout(resolve, 25))
+          await new Promise((resolve) => setDelayTimeout(resolve, 25));
         }
 
-        await new Promise(resolve => {
+        await new Promise((resolve) => {
           getCfisOrShiftAndSnap.current = async () => {
-
             //// STEP 1 ////
 
-            reportInfoOrCapture(uriAsKey)
+            reportInfoOrCapture(uriAsKey);
 
-            if(stopProcessing()) return
+            if (stopProcessing()) return;
 
             // pre-skip pages which already exist
-            while(
-              (await FileSystem.getInfoAsync(
-                getSnapshotURI({
-                  bookId,
-                  spineIdRef,
-                  width,
-                  height,
-                  displaySettings,
-                  spineInlineToolsHash,
-                  pageIndexInSpine: pageIndexInSpine.current,
-                })
-              )).exists
+            while (
+              (
+                await FileSystem.getInfoAsync(
+                  getSnapshotURI({
+                    bookId,
+                    spineIdRef,
+                    width,
+                    height,
+                    displaySettings,
+                    spineInlineToolsHash,
+                    pageIndexInSpine: pageIndexInSpine.current,
+                  }),
+                )
+              ).exists
             ) {
-              pageIndexInSpine.current++
+              pageIndexInSpine.current++;
             }
 
-            if(pageIndexInSpine.current >= numPages) return resolve()
+            if (pageIndexInSpine.current >= numPages) return resolve();
 
-            if(stopProcessing()) return
+            if (stopProcessing()) return;
 
-            const shift = pageIndexInSpine.current * (realWidth - platformOffset) * -1 + platformOffset
+            const shift =
+              pageIndexInSpine.current * (realWidth - platformOffset) * -1 +
+              platformOffset;
 
             // getBoundingClientRect combined with the timeout [hopefully] ensures
             // paint is done before the postMessage call.
@@ -261,62 +257,66 @@ const PageCapture = ({
                   },
                 }));
               }, 16);
-            `)
+            `);
+          };
 
-          }
+          getCfisOrShiftAndSnap.current();
+        });
 
-          getCfisOrShiftAndSnap.current()
-        })
-
-        if(stopProcessing()) return
+        if (stopProcessing()) return;
 
         addSpinePageCfis({
           bookId,
           idref: spineIdRef,
-          key: [getPageCfisKey({ displaySettings, width, height, spineInlineToolsHash })],
-          pageCfis: pageCfis.current.map(cfi => cfi || ''),
-        })
+          key: [
+            getPageCfisKey({
+              displaySettings,
+              width,
+              height,
+              spineInlineToolsHash,
+            }),
+          ],
+          pageCfis: pageCfis.current.map((cfi) => cfi || ''),
+        });
 
-        reportFinished(uriAsKey)
+        reportFinished(uriAsKey);
 
-        pageCfis.current = []
+        pageCfis.current = [];
 
-        return true
-
+        return true;
       }
 
       case 'docElShifted': {
-
         //// STEP 2 ////
 
-        if(spineIdRef !== data.payload.spineIdRef) return // just in case
+        if (spineIdRef !== data.payload.spineIdRef) return; // just in case
 
-        if(stopProcessing()) return
+        if (stopProcessing()) return;
 
-        reportInfoOrCapture(uriAsKey)
+        reportInfoOrCapture(uriAsKey);
 
-        const { offsetX, offsetY, toolSpots } = toolSpotSets.current || {}
+        const { offsetX, offsetY, toolSpots } = toolSpotSets.current || {};
 
         setToolSpots(
           !toolSpots
-            ? {}  // A new object is needed here so as to make sure we get to step 3.
+            ? {} // A new object is needed here so as to make sure we get to step 3.
             : {
-              offsetX: offsetX + realMarginHorizontal,
-              spots: (toolSpots[pageIndexInSpine.current] || []).map(({ y, cfi, ordering=0 }) => ({
-                y: y + offsetY + truePageMarginTop,
-                spineIdRef,
-                cfi,
-                ordering,
-              })),
-            }
-        )
+                offsetX: offsetX + realMarginHorizontal,
+                spots: (toolSpots[pageIndexInSpine.current] || []).map(
+                  ({ y, cfi, ordering = 0 }) => ({
+                    y: y + offsetY + truePageMarginTop,
+                    spineIdRef,
+                    cfi,
+                    ordering,
+                  }),
+                ),
+              },
+        );
 
-        return true
-
+        return true;
       }
-
     }
-  }
+  };
 
   // if(processingPaused) return null
 
@@ -353,14 +353,17 @@ const PageCapture = ({
         toolSpots={toolSpots}
       />
     </View>
-  )
-}
+  );
+};
 
-const mapStateToProps = () => ({
-})
+const mapStateToProps = () => ({});
 
-const matchDispatchToProps = (dispatch) => bindActionCreators({
-  addSpinePageCfis,
-}, dispatch)
+const matchDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      addSpinePageCfis,
+    },
+    dispatch,
+  );
 
-export default connect(mapStateToProps, matchDispatchToProps)(PageCapture)
+export default connect(mapStateToProps, matchDispatchToProps)(PageCapture);

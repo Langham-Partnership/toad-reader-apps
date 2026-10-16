@@ -1,17 +1,23 @@
-import React, { useState, useCallback } from "react"
-import { StyleSheet, View, Text, Platform } from "react-native"
-import { bindActionCreators } from "redux"
-import { connect } from "react-redux"
-import { i18n } from "inline-i18n"
+import React, { useState, useCallback } from 'react';
+import { StyleSheet, View, Text, Platform } from 'react-native';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+import { i18n } from 'inline-i18n';
 
-import { validLTIUrl, getDataOrigin, safeFetch, getReqOptionsWithAdditions, openURL } from "../../utils/toolbox"
-import useClassroomInfo from "../../hooks/useClassroomInfo"
-import useRouterState from "../../hooks/useRouterState"
+import {
+  validLTIUrl,
+  getDataOrigin,
+  safeFetch,
+  getReqOptionsWithAdditions,
+  openURL,
+} from '../../utils/toolbox';
+import useClassroomInfo from '../../hooks/useClassroomInfo';
+import useRouterState from '../../hooks/useRouterState';
 
-import Button from "../basic/Button"
-import CoverAndSpin from "../basic/CoverAndSpin"
-import FlipEditorContent from '../basic/FlipEditorContent'
-import WebView from '../major/WebView'
+import Button from '../basic/Button';
+import CoverAndSpin from '../basic/CoverAndSpin';
+import FlipEditorContent from '../basic/FlipEditorContent';
+import WebView from '../major/WebView';
 
 const styles = StyleSheet.create({
   container: {
@@ -38,132 +44,136 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   webview: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
-})
+});
 
-const LTITool = React.memo(({
-  bookId,
-  toolUid,
-  logUsageEvent,
+const LTITool = React.memo(
+  ({
+    bookId,
+    toolUid,
+    logUsageEvent,
 
-  url,
-  instructions,
-  fromDefaultClassroom,
+    url,
+    instructions,
+    fromDefaultClassroom,
 
-  idps,
-  accounts,
-  books,
-  userDataByBookId,
-}) => {
+    idps,
+    accounts,
+    books,
+    userDataByBookId,
+  }) => {
+    const { idpId, accountId, classroom } = useClassroomInfo({
+      books,
+      bookId,
+      userDataByBookId,
+    });
+    const { historyPush } = useRouterState();
 
-  const { idpId, accountId, classroom } = useClassroomInfo({ books, bookId, userDataByBookId })
-  const { historyPush } = useRouterState()
+    const [showWaiting, setShowWaiting] = useState(false);
+    const [launchLink, setLaunchLink] = useState();
 
-  const [ showWaiting, setShowWaiting ] = useState(false)
-  const [ launchLink, setLaunchLink ] = useState()
-
-  const launch = useCallback(
-    async () =>  {
-
-      setShowWaiting(true)
+    const launch = useCallback(async () => {
+      setShowWaiting(true);
 
       try {
-
         // get a JWT from the backend which includes expiry time, lti link, info to post to that link
-        const getLaunchLinkUrl = `${getDataOrigin(idps[idpId])}/getltilaunchlink/${toolUid}`
-        const response = await safeFetch(getLaunchLinkUrl, getReqOptionsWithAdditions({
-          headers: {
-            "x-cookie-override": accounts[accountId].cookie,
-          },
-        }))
+        const getLaunchLinkUrl = `${getDataOrigin(idps[idpId])}/getltilaunchlink/${toolUid}`;
+        const response = await safeFetch(
+          getLaunchLinkUrl,
+          getReqOptionsWithAdditions({
+            headers: {
+              'x-cookie-override': accounts[accountId].cookie,
+            },
+          }),
+        );
 
-        if(response.status !== 200) {
-          throw new Error('Server-side error.')
+        if (response.status !== 200) {
+          throw new Error('Server-side error.');
         }
 
-        const { success, error, launchLink } = await response.json()
+        const { success, error, launchLink } = await response.json();
 
-        if(!success) {
-          throw new Error(error)
+        if (!success) {
+          throw new Error(error);
         }
 
-        if(Platform.OS === 'web') {
-          openURL({ url: launchLink, historyPush })
+        if (Platform.OS === 'web') {
+          openURL({ url: launchLink, historyPush });
         } else {
-          setLaunchLink(launchLink)
+          setLaunchLink(launchLink);
         }
 
         logUsageEvent({
           toolUid,
           usageType: `LTI launch`,
           'LTI domain': (url.match(/^https?:\/\/([^:/\n?]+)/i) || [])[1],
-        })
-
-      } catch(err) {
-        historyPush("/error", err)
+        });
+      } catch (err) {
+        historyPush('/error', err);
       }
 
-      setShowWaiting(false)
+      setShowWaiting(false);
+    }, [toolUid]);
 
-    },
-    [ toolUid ],
-  )
+    const invalidSetup = !validLTIUrl({ url, fromDefaultClassroom, classroom });
 
-  const invalidSetup = !validLTIUrl({ url, fromDefaultClassroom, classroom })
-
-  if(launchLink) {
-    return (
-      <View style={styles.ltiContainer}>
-        <WebView
-          source={{
-            uri: launchLink,
-          }}
-          style={styles.webview}
-        />
-      </View>
-    )
-  }
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.buttonContainer}>
-        <View style={styles.buttonWrapper}>
-          <Button
-            status="primary"
-            onPress={launch}
-            disabled={invalidSetup || showWaiting}
-          >
-            {i18n("Launch")}
-          </Button>
-          {showWaiting && <CoverAndSpin />}
-        </View>
-      </View>
-      {!!invalidSetup &&
-        <Text style={styles.noLTISetup}>
-          {i18n("There is not a LTI configuration with a domain matching this tool’s Launch URL.", "", "enhanced")}
-        </Text>
-      }
-      {!invalidSetup && !!instructions &&
-        <View style={styles.instructionsContainer}>
-          <FlipEditorContent
-            content={instructions}
-            style={styles.instructions}
+    if (launchLink) {
+      return (
+        <View style={styles.ltiContainer}>
+          <WebView
+            source={{
+              uri: launchLink,
+            }}
+            style={styles.webview}
           />
         </View>
-      }
-    </View>
-  )
-})
+      );
+    }
+
+    return (
+      <View style={styles.container}>
+        <View style={styles.buttonContainer}>
+          <View style={styles.buttonWrapper}>
+            <Button
+              status="primary"
+              onPress={launch}
+              disabled={invalidSetup || showWaiting}
+            >
+              {i18n('Launch')}
+            </Button>
+            {showWaiting && <CoverAndSpin />}
+          </View>
+        </View>
+        {!!invalidSetup && (
+          <Text style={styles.noLTISetup}>
+            {i18n(
+              'There is not a LTI configuration with a domain matching this tool’s Launch URL.',
+              '',
+              'enhanced',
+            )}
+          </Text>
+        )}
+        {!invalidSetup && !!instructions && (
+          <View style={styles.instructionsContainer}>
+            <FlipEditorContent
+              content={instructions}
+              style={styles.instructions}
+            />
+          </View>
+        )}
+      </View>
+    );
+  },
+);
 
 const mapStateToProps = ({ idps, accounts, books, userDataByBookId }) => ({
   idps,
   accounts,
   books,
   userDataByBookId,
-})
+});
 
-const matchDispatchToProps = (dispatch) => bindActionCreators({
-}, dispatch)
+const matchDispatchToProps = (dispatch) => bindActionCreators({}, dispatch);
 
-export default connect(mapStateToProps, matchDispatchToProps)(LTITool)
+export default connect(mapStateToProps, matchDispatchToProps)(LTITool);

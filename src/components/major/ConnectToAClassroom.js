@@ -1,237 +1,261 @@
-import React, { useState, useCallback, useEffect } from "react"
-import { Platform, StyleSheet } from "react-native"
-import { bindActionCreators } from "redux"
-import { connect } from "react-redux"
-import { i18n } from "inline-i18n"
-import { CameraView, useCameraPermissions } from "expo-camera"
-import { Modal } from "@ui-kitten/components"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import React, { useState, useCallback, useEffect } from 'react';
+import { Platform, StyleSheet } from 'react-native';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+import { i18n } from 'inline-i18n';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Modal } from '@ui-kitten/components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import BackFunction from '../basic/BackFunction'
-import useRouterState from "../../hooks/useRouterState"
-import { getDataOrigin, getReqOptionsWithAdditions, getIdsFromAccountId, safeFetch } from '../../utils/toolbox'
-import { refreshUserData } from "../../utils/syncUserData"
-import { setCurrentClassroom } from "../../redux/actions"
+import BackFunction from '../basic/BackFunction';
+import useRouterState from '../../hooks/useRouterState';
+import {
+  getDataOrigin,
+  getHasNotchInsets,
+  getIdsFromAccountId,
+  getReqOptionsWithAdditions,
+  safeFetch,
+} from '../../utils/toolbox';
+import { refreshUserData } from '../../utils/syncUserData';
+import { setCurrentClassroom } from '../../redux/actions';
 
-import Dialog from "./Dialog"
-import DialogInput from "../basic/DialogInput"
-import Toast from "../../utils/Toast"
-import Button from '../basic/Button'
+import Dialog from './Dialog';
+import DialogInput from '../basic/DialogInput';
+import Toast from '../../utils/Toast';
+import Button from '../basic/Button';
 
 const styles = StyleSheet.create({
   doQRButton: {
     marginTop: 10,
   },
   modal: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'black',
   },
   codeScanner: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   backToTextCodeButton: {
     position: 'absolute',
     left: 30,
     right: 30,
   },
-})
+});
 
-const ConnectToAClassroom = React.memo(({
-  open,
-  requestHide,
-  bookId: currentBookId,
+const ConnectToAClassroom = React.memo(
+  ({
+    open,
+    requestHide,
+    bookId: currentBookId,
 
-  idps,
-  accounts,
-  books,
+    idps,
+    accounts,
+    books,
 
-  setCurrentClassroom,
-}) => {
+    setCurrentClassroom,
+  }) => {
+    const [code, setCode] = useState('');
+    const [connecting, setConnecting] = useState(false);
+    const [mode, setMode] = useState('text');
+    const [permission, requestPermission] = useCameraPermissions();
 
-  const [ code, setCode ] = useState("")
-  const [ connecting, setConnecting ] = useState(false)
-  const [ mode, setMode ] = useState("text")
-  const [permission, requestPermission] = useCameraPermissions()
+    const safeAreaInsets = useSafeAreaInsets();
 
-  const safeAreaInsets = useSafeAreaInsets()
+    const { historyPush, historyReplace } = useRouterState();
 
-  const { historyPush, historyReplace } = useRouterState()
+    const setModeQR = useCallback(() => setMode('qr'), []);
+    const setModeText = useCallback(() => setMode('text'), []);
 
-  const setModeQR = useCallback(() => setMode("qr"), [])
-  const setModeText = useCallback(() => setMode("text"), [])
-
-  useEffect(
-    () => {
+    useEffect(() => {
       setTimeout(async () => {
-        if(mode === "qr" && !permission?.granted) {
-          const permissionResult = await requestPermission()
-          if(!permissionResult.granted) {
-            setModeText()
+        if (mode === 'qr' && !permission?.granted) {
+          const permissionResult = await requestPermission();
+          if (!permissionResult.granted) {
+            setModeText();
           }
         }
-      })
-    },
-    [ mode, permission ],
-  )
+      });
+    }, [mode, permission]);
 
-  const book = books[currentBookId] || {}
-  const accountId = Object.keys(book.accounts)[0] || ""
-  const { idpId } = getIdsFromAccountId(accountId)
-  const idp = idps[idpId]
+    const book = books[currentBookId] || {};
+    const accountId = Object.keys(book.accounts)[0] || '';
+    const { idpId } = getIdsFromAccountId(accountId);
+    const idp = idps[idpId];
 
-  const connectToAClassroom = useCallback(
-    async ({ qrCode }) => {
+    const connectToAClassroom = useCallback(
+      async ({ qrCode }) => {
+        setConnecting(true);
 
-      setConnecting(true)
-
-      const path = `${getDataOrigin(idp)}/connect_to_classroom`
-      let response
-      try {
-        response = await safeFetch(path, getReqOptionsWithAdditions({
-          method: 'POST',
-          headers: {
-            "Content-Type": 'application/json',
-            "x-cookie-override": accounts[accountId].cookie,
-          },
-          body: JSON.stringify({ code: qrCode || code }),
-        }))
-      } catch(e) {  // eslint-disable-line @typescript-eslint/no-unused-vars
-        /* empty */
-      }
-
-      if(!response || response.status >= 400) {
-        historyPush("/error", {
-          message: i18n("Failed to connect to the classroom. Check the code and try again.", "", "enhanced"),
-        })
-        return
-      }
-
-      const { uid, bookId, role } = await response.json()
-
-      const { success } = await refreshUserData({
-        accountId,
-        bookId,
-      }) || {}
-
-      if(!success) {
-        historyPush("/error", {
-          message: i18n("You successfully connected to the classroom. However, we are unable to load the classroom data.", "", "enhanced"),
-        })
-        setConnecting(false)
-        return
-      }
-
-      if(bookId !== parseInt(currentBookId, 10)) {
-        historyReplace(`/book/${bookId}`)
-      }
-
-      setCurrentClassroom({
-        bookId,
-        uid,
-      })
-      setConnecting(false)
-      requestHide({ hideAll: true })
-
-      Toast.show({
-        text: (
-          role === 'INSTRUCTOR'
-            ? i18n("You are now connected as an instructor.", "", "enhanced")
-            : i18n("You are now connected as an student.", "", "enhanced")
-        ),
-        duration: 4000,
-      })
-
-    },
-    [ idp, accounts, books, idpId, accountId, currentBookId, code ],
-  )
-
-  const handleBarCodeScanned = useCallback(
-    ({ data }) => {
-      if(/^[A-Z0-9]+$/.test(data)) {
-        setModeText()
-        connectToAClassroom({ qrCode: data })
-      }
-    },
-    [ connectToAClassroom ],
-  )
-
-  const onChangeText = useCallback(code => setCode(code), [])
-
-  return (
-    <>
-      {!!open && <BackFunction func={requestHide} />}
-      <Dialog
-        open={!!open && (mode === 'text' || !permission?.granted)}
-        type="confirm"
-        title={i18n("Connect to a classroom", "", "enhanced")}
-        message={
-          <>
-            <DialogInput
-              value={code}
-              onChangeText={onChangeText}
-              label={i18n("Text code", "", "enhanced")}
-              placeholder={i18n("Eg. {{example}}", "", "enhanced", { example: "U76RE9" })}
-            />
-            {Platform.OS !== 'web' &&
-              <Button
-                style={styles.doQRButton}
-                onPress={setModeQR}
-                size="small"
-                status="basic"
-              >
-                {i18n("Scan QR code", "", "enhanced")}
-              </Button>
-            }
-          </>
+        const path = `${getDataOrigin(idp)}/connect_to_classroom`;
+        let response;
+        try {
+          response = await safeFetch(
+            path,
+            getReqOptionsWithAdditions({
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-cookie-override': accounts[accountId].cookie,
+              },
+              body: JSON.stringify({ code: qrCode || code }),
+            }),
+          );
+        } catch {
+          /* empty */
         }
-        confirmButtonText={i18n("Connect", "", "enhanced")}
-        confirmButtonStatus="primary"
-        onCancel={requestHide}
-        onConfirm={connectToAClassroom}
-        submitting={connecting}
-      />
-      <Modal
-        visible={!!open && mode === 'qr' && permission?.granted}
-        allowBackdrop={true}
-        style={[
-          styles.modal,
-          {
-            top: safeAreaInsets.top > 30 ? safeAreaInsets.top * -1 - 4 : 0,  // I do not know why the 4 is needed
-          },
-        ]}
-      >
-        <CameraView
-          onBarcodeScanned={handleBarCodeScanned}
-          style={styles.codeScanner}
-          barcodeScannerSettings={{
-            barcodeTypes: ["qr", "pdf417"],
-          }}
+
+        if (!response || response.status >= 400) {
+          historyPush('/error', {
+            message: i18n(
+              'Failed to connect to the classroom. Check the code and try again.',
+              '',
+              'enhanced',
+            ),
+          });
+          return;
+        }
+
+        const { uid, bookId, role } = await response.json();
+
+        const { success } =
+          (await refreshUserData({
+            accountId,
+            bookId,
+          })) || {};
+
+        if (!success) {
+          historyPush('/error', {
+            message: i18n(
+              'You successfully connected to the classroom. However, we are unable to load the classroom data.',
+              '',
+              'enhanced',
+            ),
+          });
+          setConnecting(false);
+          return;
+        }
+
+        if (bookId !== parseInt(currentBookId, 10)) {
+          historyReplace(`/book/${bookId}`);
+        }
+
+        setCurrentClassroom({
+          bookId,
+          uid,
+        });
+        setConnecting(false);
+        requestHide({ hideAll: true });
+
+        Toast.show({
+          text:
+            role === 'INSTRUCTOR'
+              ? i18n('You are now connected as an instructor.', '', 'enhanced')
+              : i18n('You are now connected as an student.', '', 'enhanced'),
+          duration: 4000,
+        });
+      },
+      [idp, accounts, books, idpId, accountId, currentBookId, code],
+    );
+
+    const handleBarCodeScanned = useCallback(
+      ({ data }) => {
+        if (/^[A-Z0-9]+$/.test(data)) {
+          setModeText();
+          connectToAClassroom({ qrCode: data });
+        }
+      },
+      [connectToAClassroom],
+    );
+
+    const onChangeText = useCallback((code) => setCode(code), []);
+
+    return (
+      <>
+        {!!open && <BackFunction func={requestHide} />}
+        <Dialog
+          open={!!open && (mode === 'text' || !permission?.granted)}
+          type="confirm"
+          title={i18n('Connect to a classroom', '', 'enhanced')}
+          message={
+            <>
+              <DialogInput
+                value={code}
+                onChangeText={onChangeText}
+                label={i18n('Text code', '', 'enhanced')}
+                placeholder={i18n('Eg. {{example}}', '', 'enhanced', {
+                  example: 'U76RE9',
+                })}
+              />
+              {Platform.OS !== 'web' && (
+                <Button
+                  style={styles.doQRButton}
+                  onPress={setModeQR}
+                  size="small"
+                  status="basic"
+                >
+                  {i18n('Scan QR code', '', 'enhanced')}
+                </Button>
+              )}
+            </>
+          }
+          confirmButtonText={i18n('Connect', '', 'enhanced')}
+          confirmButtonStatus="primary"
+          onCancel={requestHide}
+          onConfirm={connectToAClassroom}
+          submitting={connecting}
         />
-        <Button
+        <Modal
+          visible={!!open && mode === 'qr' && permission?.granted}
+          allowBackdrop={true}
           style={[
-            styles.backToTextCodeButton,
+            styles.modal,
             {
-              bottom: 30 + safeAreaInsets.bottom,
+              top: getHasNotchInsets(safeAreaInsets)
+                ? safeAreaInsets.top * -1 - 4 // I do not know why the 4 is needed
+                : 0,
             },
           ]}
-          onPress={setModeText}
-          status="basic"
         >
-          {i18n("Cancel")}
-        </Button>
-      </Modal>
-    </>
-  )
-})
+          <CameraView
+            onBarcodeScanned={handleBarCodeScanned}
+            style={styles.codeScanner}
+            barcodeScannerSettings={{
+              barcodeTypes: ['qr', 'pdf417'],
+            }}
+          />
+          <Button
+            style={[
+              styles.backToTextCodeButton,
+              {
+                bottom: 30 + safeAreaInsets.bottom,
+              },
+            ]}
+            onPress={setModeText}
+            status="basic"
+          >
+            {i18n('Cancel')}
+          </Button>
+        </Modal>
+      </>
+    );
+  },
+);
 
 const mapStateToProps = ({ idps, accounts, books }) => ({
   idps,
   accounts,
   books,
-})
+});
 
-const matchDispatchToProps = (dispatch) => bindActionCreators({
-  setCurrentClassroom,
-}, dispatch)
+const matchDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      setCurrentClassroom,
+    },
+    dispatch,
+  );
 
-export default connect(mapStateToProps, matchDispatchToProps)(ConnectToAClassroom)
+export default connect(
+  mapStateToProps,
+  matchDispatchToProps,
+)(ConnectToAClassroom);
