@@ -1,9 +1,10 @@
 // Audio and video are switched off until the players are rebuilt (see media.js).
 //
-//     npx jest src/utils/media.test.js
+//     npx jest src/utils/media.test.tsx
 
 import fs from 'fs';
 import path from 'path';
+import type { ComponentType } from 'react';
 import { render, screen } from '@testing-library/react-native';
 
 import { Audio, mediaAvailable } from './media';
@@ -110,15 +111,15 @@ describe('components that played audio or video', () => {
       <VideoTool videoLink="https://www.youtube.com/watch?v=Y80wHFoYrrQ" />,
     );
     expect(screen.queryByText(notice)).toBeNull();
-    expect(UNSAFE_getByType('WebView').props.source.uri).toContain(
-      'https://www.youtube.com/embed/Y80wHFoYrrQ',
-    );
+    expect(
+      UNSAFE_getByType('WebView' as unknown as ComponentType).props.source.uri,
+    ).toContain('https://www.youtube.com/embed/Y80wHFoYrrQ');
 
     rerender(<VideoTool videoLink="https://vimeo.com/76979871" />);
     expect(screen.queryByText(notice)).toBeNull();
-    expect(UNSAFE_getByType('WebView').props.source.uri).toContain(
-      'https://player.vimeo.com/video/76979871',
-    );
+    expect(
+      UNSAFE_getByType('WebView' as unknown as ComponentType).props.source.uri,
+    ).toContain('https://player.vimeo.com/video/76979871');
   });
 });
 

@@ -1,6 +1,6 @@
 // Tool types and the video link, while audio and video files cannot be played (READER-156).
 //
-//     npx jest src/utils/toolInfo.test.js
+//     npx jest src/utils/toolInfo.test.tsx
 
 import { render, screen } from '@testing-library/react-native';
 

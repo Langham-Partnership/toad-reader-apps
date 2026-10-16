@@ -1,6 +1,6 @@
 // The page picture that zooms between the page and the page list (READER-156).
 //
-//     npx jest src/components/major/ZoomPage.test.js
+//     npx jest src/components/major/ZoomPage.test.tsx
 //
 // iOS and web must get what they got before. On an Android phone nothing changes here. In wide
 // mode on Android the picture must sit and land where it did on SDK 53, when the window ended
@@ -9,6 +9,7 @@
 
 import { Platform, StatusBar, StyleSheet } from 'react-native';
 import { render } from '@testing-library/react-native';
+import type { ReactTestRendererJSON } from 'react-test-renderer';
 
 import ZoomPage from './ZoomPage';
 import useAdjustedDimensions from '../../hooks/useAdjustedDimensions';
@@ -96,7 +97,9 @@ const renderPicture = (snapshotCoords) => {
       sidePanelSettings={sidePanelSettings}
     />,
   );
-  const style = StyleSheet.flatten(toJSON().props.style);
+  const style = StyleSheet.flatten(
+    (toJSON() as ReactTestRendererJSON).props.style,
+  );
   unmount();
   return style;
 };
@@ -104,13 +107,16 @@ const renderPicture = (snapshotCoords) => {
 // Frozen copy of usePageSize and of the arithmetic of ZoomPage at commit 48125c5f, which for
 // iOS and web is that of commit 0e27c0a6. Do not change it together with ZoomPage.
 const pageSize = ({ fullPageWidth: width, fullPageHeight: height }) => {
-  const maxWidth = parseInt(height < width ? 150 : 150 * (width / height), 10);
-  const pagesPerRow = parseInt(width / maxWidth, 10);
-  const pageWidth = parseInt(
-    (width - (pagesPerRow + 1) * 10) / pagesPerRow,
+  const maxWidth = parseInt(
+    String(height < width ? 150 : 150 * (width / height)),
     10,
   );
-  const pageHeight = parseInt(pageWidth / (width / height), 10);
+  const pagesPerRow = parseInt(String(width / maxWidth), 10);
+  const pageWidth = parseInt(
+    String((width - (pagesPerRow + 1) * 10) / pagesPerRow),
+    10,
+  );
+  const pageHeight = parseInt(String(pageWidth / (width / height)), 10);
   return { pageWidth, pageHeight };
 };
 
@@ -186,7 +192,7 @@ describe('ZoomPage on iOS and web', () => {
             };
             setDevice(device);
             const wideMode = getWideMode(window);
-            // useAdjustedDimensions.test.js shows these are unchanged on iOS and web
+            // useAdjustedDimensions.test.ts shows these are unchanged on iOS and web
             const dimensions = useAdjustedDimensions({ sidePanelSettings });
 
             ys.forEach((y) => {
@@ -252,7 +258,7 @@ describe('ZoomPage in wide mode on Android (edge to edge)', () => {
               insets: { top, bottom },
               statusBarCurrentHeight,
             });
-            // useAdjustedDimensions.test.js shows these are the SDK 53 values in wide mode
+            // useAdjustedDimensions.test.ts shows these are the SDK 53 values in wide mode
             const dimensions = useAdjustedDimensions({ sidePanelSettings });
             const sdk53 = {
               os: 'android',
@@ -310,7 +316,7 @@ describe('ZoomPage in wide mode on Android (edge to edge)', () => {
 describe('getCornerSnapshotCoords', () => {
   it('is height less the bottom inset on iOS and web, as before', () => {
     ['ios', 'web'].forEach((os) => {
-      Platform.OS = os;
+      Platform.OS = os as typeof Platform.OS;
       [500, 803.5, 884].forEach((height) => {
         [0, 20, 34].forEach((bottom) => {
           [false, true].forEach((wideMode) => {

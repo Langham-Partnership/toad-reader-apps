@@ -1,6 +1,6 @@
 // The geometry of the reader page (READER-156).
 //
-//     npx jest src/hooks/useAdjustedDimensions.test.js
+//     npx jest src/hooks/useAdjustedDimensions.test.ts
 //
 // iOS and web must return what they returned before Android was given its own arithmetic.
 // On an Android phone (edge to edge) the text must end just above the navigation bar, whatever
@@ -48,9 +48,9 @@ const before = ({
   insets: safeAreaInsets,
   statusBarCurrentHeight,
   props: {
-    fullPageWidth,
-    fullPageHeight,
-    realFullPageWidth,
+    fullPageWidth = undefined,
+    fullPageHeight = undefined,
+    realFullPageWidth = undefined,
     realFullPageMarginHorizontal = 0,
     sidePanelSettings,
     widget = false,
@@ -89,7 +89,7 @@ const before = ({
     realFullPageMarginHorizontal = (fullPageWidth - realFullPageWidth) / 2;
   }
 
-  let truePageWidth = fullPageWidth;
+  const truePageWidth = fullPageWidth;
   let truePageHeight = fullPageHeight - safeAreaInsets.bottom;
   let truePageMarginTop = 0;
 

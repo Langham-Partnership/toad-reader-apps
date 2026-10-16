@@ -1,6 +1,6 @@
 // Where the highlight panel sits (READER-156).
 //
-//     npx jest src/components/major/Highlighter.test.js
+//     npx jest src/components/major/Highlighter.test.tsx
 //
 // iOS and web must get what they got before. On an Android phone nothing changes here. In wide
 // mode on Android the panel must get what it got on SDK 53, when the window ended at both bars
@@ -39,7 +39,13 @@ jest.mock('./HighlighterInstructorHighlightSection', () => () => null);
 const realOS = Platform.OS;
 const realStatusBarCurrentHeight = StatusBar.currentHeight;
 
-const setDevice = ({ os, window, insets, statusBarCurrentHeight, widget }) => {
+const setDevice = ({
+  os,
+  window,
+  insets,
+  statusBarCurrentHeight,
+  widget = undefined,
+}) => {
   Platform.OS = os;
   StatusBar.currentHeight = statusBarCurrentHeight;
   mockWindow = window;
@@ -52,7 +58,9 @@ beforeEach(() => {
   keyboardListeners = {};
   jest.spyOn(Keyboard, 'addListener').mockImplementation((event, listener) => {
     keyboardListeners[event] = listener;
-    return { remove: () => {} };
+    return { remove: () => {} } as unknown as ReturnType<
+      typeof Keyboard.addListener
+    >;
   });
 });
 
@@ -84,7 +92,9 @@ const renderPanel = ({ copyTooltipInLowerHalf, keyboardShowing }) => {
     />,
   );
   if (keyboardShowing) {
-    act(() => keyboardListeners.keyboardDidShow());
+    act(() =>
+      (keyboardListeners as Record<string, () => void>).keyboardDidShow(),
+    );
   }
   const [panel] = UNSAFE_root.findAll(
     (node) => typeof node.type === 'string' && !!node.props.onTouchEnd,

@@ -1,6 +1,6 @@
 // The tool type field of the tool editor (READER-156).
 //
-//     npx jest src/components/major/EditTool.test.js
+//     npx jest src/components/major/EditTool.test.tsx
 //
 // An audio tool can no longer be chosen (see media.js). An existing one keeps its type: it is
 // shown, with no row of the list selected, and the field is locked.
@@ -72,7 +72,9 @@ const renderToolTypeField = (tool) => {
     />,
   );
   const [field] = UNSAFE_root.findAll(
-    (node) => node.type === 'Select' || node.type === 'SelectWebPortalWrapper',
+    (node) =>
+      (node.type as unknown) === 'Select' ||
+      (node.type as unknown) === 'SelectWebPortalWrapper',
   );
   const { props } = field;
   unmount();
@@ -82,7 +84,7 @@ const renderToolTypeField = (tool) => {
 describe('EditTool', () => {
   it('locks an audio tool on iOS and Android and selects no row', () => {
     ['ios', 'android'].forEach((os) => {
-      Platform.OS = os;
+      Platform.OS = os as typeof Platform.OS;
       [{}, { audioFile: 'file.mp3' }].forEach((data) => {
         const { props } = renderToolTypeField({ toolType: 'AUDIO', data });
         expect(props.value).toBe('Audio');
