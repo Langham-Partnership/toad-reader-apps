@@ -23,6 +23,11 @@ import Dialog from '../major/Dialog';
 const { QUOTES_DOMAIN } = Constants.expoConfig.extra;
 
 const styles = StyleSheet.create({
+  // READER-168: Langham does not want highlight sharing, so the button is hidden rather than removed.
+  // To bring it back (READER-167), drop this style from the TouchableOpacity below.
+  hidden: {
+    display: 'none',
+  },
   share: {
     paddingHorizontal: 8,
     paddingVertical: 5,
@@ -102,7 +107,7 @@ const HighlighterShareIcon = React.memo(
 
     return (
       <>
-        <TouchableOpacity {...goShareOnPressProps}>
+        <TouchableOpacity {...goShareOnPressProps} style={styles.hidden}>
           <Ionicons name="share" style={styles.share} />
         </TouchableOpacity>
         {Platform.OS === 'web' && (
