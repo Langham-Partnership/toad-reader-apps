@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react-native';
-import { TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import { getAccountIdIsNoAuth } from '../../hooks/useHasNoAuth';
 import HighlighterShareIcon from './HighlighterShareIcon';
 
@@ -60,5 +60,11 @@ describe('HighlighterShareIcon Component', () => {
   it('should render the share icon button', () => {
     render(<HighlighterShareIcon {...defaultProps} />);
     expect(screen.UNSAFE_getByType(TouchableOpacity)).toBeTruthy();
+  });
+
+  it('should keep the share button hidden (READER-168)', () => {
+    render(<HighlighterShareIcon {...defaultProps} />);
+    const button = screen.UNSAFE_getByType(TouchableOpacity);
+    expect(StyleSheet.flatten(button.props.style)).toEqual({ display: 'none' });
   });
 });
