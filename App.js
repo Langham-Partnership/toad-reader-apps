@@ -56,6 +56,8 @@ if (SENTRY_DSN) {
     enabled: !__DEV__,
     release: `${Constants.expoConfig?.version || 'unknown'}-${Updates.updateId || 'unknown'}`,
     debug: true,
+    // Safari extension errors
+    denyUrls: [/^webkit-masked-url:\/\//],
   });
 }
 
