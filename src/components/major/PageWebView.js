@@ -7,7 +7,7 @@ import WebView from './WebView';
 import * as FileSystem from 'expo-file-system/legacy';
 import usePrevious from 'react-use/lib/usePrevious';
 
-import { postMessage } from '../../utils/postMessage';
+import { postMessage, parseReaderMessage } from '../../utils/postMessage';
 import {
   getBooksDir,
   getDataOrigin,
@@ -169,7 +169,8 @@ const PageWebView = ({
 
   const onMessageEvent = useCallback(
     async (event) => {
-      const data = JSON.parse(event.nativeEvent.data);
+      const data = parseReaderMessage(event.nativeEvent.data);
+      if (!data) return;
 
       if (onMessage && (await onMessage(webView.current, data))) return;
 
