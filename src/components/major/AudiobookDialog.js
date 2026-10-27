@@ -142,8 +142,10 @@ const AudiobookDialog = ({
   const { spines = [] } = audiobookInfo;
   const coverHref = useCoverHref({ bookInfo: editedBook, bookId });
   const getAudiobookInfo = useInstanceValue(audiobookInfo);
-  const downloadOrigin =
-    __DEV__ && DEV_USE_DEVELOPMENT_BACKEND
+  // No idp when nobody is logged in, e.g. on the error page after a failed login
+  const downloadOrigin = !idps[idpId]
+    ? ``
+    : __DEV__ && DEV_USE_DEVELOPMENT_BACKEND
       ? getDataOrigin(idps[idpId])
       : getIDPOrigin(idps[idpId]);
   const bookCookies = useBookCookies({
