@@ -17,6 +17,7 @@ import { i18nSetup } from 'inline-i18n';
 import './src/themes/style';
 import translationModifier from './translationModifier';
 import reducers from './src/redux/reducers';
+import { autoUpdateCoreIdps } from './src/redux/actions';
 import lightTheme from './src/themes/light';
 import darkTheme from './src/themes/dark';
 import customMapping from './src/themes/custom-mapping';
@@ -308,7 +309,11 @@ const App = () => {
           >
             <SafeAreaProvider>
               <Provider store={store}>
-                <PersistGate persistor={persistor}>
+                <PersistGate
+                  persistor={persistor}
+                  // Replace an old persisted data domain before the first render
+                  onBeforeLift={() => store.dispatch(autoUpdateCoreIdps())}
+                >
                   <Library
                     isUpdatePending={isUpdatePending}
                     isUpdateAvailable={isUpdateAvailable}
