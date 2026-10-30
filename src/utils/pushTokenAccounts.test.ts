@@ -1,6 +1,6 @@
 // READER-145. Which accounts a changed push token is sent to.
 //
-//     npx jest src/utils/pushTokenAccounts.test.js
+//     npx jest src/utils/pushTokenAccounts.test.ts
 
 import {
   canForgetPendingToken,
