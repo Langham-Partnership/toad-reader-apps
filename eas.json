@@ -17,6 +17,7 @@
       "distribution": "internal",
       "env": {
         "EXPO_UPDATES_ENABLE": "false",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "channel": "development"
       },
       "ios": {

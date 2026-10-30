@@ -13,6 +13,7 @@
 
 /app.json
 .env*.local
+.env.sentry
 /translationModifier.js
 
 /google-services.json
