@@ -1,13 +1,13 @@
 // READER-180. After an app update, the persisted idps can still name the old data domain. The first render must
 // already see the build's own IDPS, or the launch requests go to a host that no longer exists.
 //
-//     npx jest src/redux/reducers/idps.test.js
+//     npx jest src/redux/reducers/idps.test.tsx
 
 import { useRef } from 'react';
 import { Text } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { combineReducers, createStore } from 'redux';
+import { combineReducers, createStore, type Store } from 'redux';
 import { persistReducer, persistStore } from 'redux-persist';
 import { PersistGate } from 'redux-persist/integration/react';
 import idps from './idps';
@@ -22,19 +22,21 @@ jest.mock('expo-constants', () => ({
   },
 }));
 
-const persistedRoot = (idp43) =>
+type Idp = { id: number; domain: string; locked?: boolean };
+
+const persistedRoot = (idp43: Idp) =>
   JSON.stringify({
     idps: JSON.stringify({ 43: idp43 }),
     _persist: JSON.stringify({ version: -1, rehydrated: true }),
   });
 
 // Shows the domain the child saw on its first render, like the launch effects in Library.
-const FirstRenderDomain = ({ store }) => {
+const FirstRenderDomain = ({ store }: { store: Store }) => {
   const first = useRef(store.getState().idps[43].domain);
   return <Text>{first.current}</Text>;
 };
 
-const renderApp = async ({ withFix }) => {
+const renderApp = async ({ withFix }: { withFix: boolean }) => {
   const store = createStore(
     persistReducer(
       { key: 'root', storage: AsyncStorage },
