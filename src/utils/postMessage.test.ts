@@ -1,6 +1,6 @@
 // READER-182. Only the reader's own messages are parsed; anything else posted into the page is ignored.
 //
-//     npx jest src/utils/postMessage.test.js
+//     npx jest src/utils/postMessage.test.ts
 
 import { parseReaderMessage } from './postMessage';
 

@@ -29,11 +29,11 @@ export const postMessage = (webView, identifier, payload) => {
 
 // Browser extensions can post their own messages from the reader iframe on web
 export const parseReaderMessage = (data) => {
-  if (typeof data !== `string`) return null;
+  if (typeof data !== 'string') return null;
 
   try {
     const message = JSON.parse(data);
-    return message && typeof message.identifier === `string` ? message : null;
+    return message && typeof message.identifier === 'string' ? message : null;
   } catch {
     return null;
   }
