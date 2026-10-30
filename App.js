@@ -54,8 +54,8 @@ if (SENTRY_DSN) {
     dsn: SENTRY_DSN,
     environment: SENTRY_ENVIRONMENT,
     enabled: !__DEV__,
-    release: `${Constants.expoConfig?.version || 'unknown'}-${Updates.updateId || 'unknown'}`,
-    debug: true,
+    // Web has no update id, so the web push script sets the release
+    release: `${Constants.expoConfig?.version || 'unknown'}-${Updates.updateId || process.env.EXPO_PUBLIC_WEB_RELEASE || 'unknown'}`,
     // Safari extension errors
     denyUrls: [/^webkit-masked-url:\/\//],
   });
