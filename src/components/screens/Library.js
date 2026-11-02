@@ -23,6 +23,7 @@ import {
   openURL,
 } from '../../utils/toolbox';
 import { removeSnapshotsIfANewUpdateRequiresIt } from '../../utils/removeEpub';
+import { getJsonOrNull } from '../../utils/getJsonOrNull';
 import { mediaAvailable } from '../../utils/media';
 import useInstanceValue from '../../hooks/useInstanceValue';
 import useNetwork from '../../hooks/useNetwork';
@@ -321,26 +322,10 @@ const Library = ({
 
       console.log(`Getting updated metadata keys (idpId: ${idpId})...`);
 
-      const metadataKeysUrl = `${getDataOrigin(idps[idpId])}/metadatakeys`;
-      const response = await safeFetch(
-        metadataKeysUrl,
-        getReqOptionsWithAdditions({
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }),
+      const data = await getJsonOrNull(
+        `${getDataOrigin(idps[idpId])}/metadatakeys`,
       );
-
-      try {
-        const { metadataKeys } = await response.json();
-        updateMetadataKeys(metadataKeys);
-      } catch (err) {
-        console.log(
-          `/metadatakeys GET had an error.`,
-          err.message,
-          response.status,
-        );
-      }
+      if (data) updateMetadataKeys(data.metadataKeys);
 
       console.log(`Updated metadata keys (idpId: ${idpId})...`);
     })();
@@ -354,26 +339,10 @@ const Library = ({
 
       console.log(`Getting updated subscriptions (idpId: ${idpId})...`);
 
-      const subscriptionsUrl = `${getDataOrigin(idps[idpId])}/subscriptions`;
-      const response = await safeFetch(
-        subscriptionsUrl,
-        getReqOptionsWithAdditions({
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }),
+      const data = await getJsonOrNull(
+        `${getDataOrigin(idps[idpId])}/subscriptions`,
       );
-
-      try {
-        const { subscriptions } = await response.json();
-        updateSubscriptions(subscriptions);
-      } catch (err) {
-        console.log(
-          `/subscriptions GET had an error.`,
-          err.message,
-          response.status,
-        );
-      }
+      if (data) updateSubscriptions(data.subscriptions);
 
       console.log(`Updated subscriptions (idpId: ${idpId})...`);
     })();
