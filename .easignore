@@ -16,3 +16,4 @@
 *.mobileprovision
 *service-account*.json
 langham-ereader-*.json
+.env.sentry
