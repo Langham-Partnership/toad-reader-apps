@@ -46,6 +46,9 @@ export const binaryExtensionToMimeTypeMap = {
   woff2: 'application/font-woff2',
 };
 
+const httpError = (status, relativeUri) =>
+  Object.assign(new Error(`http status: ${status}`), { status, relativeUri });
+
 const getTextFile = async ({
   relativeUri,
   downloadBaseUrl,
@@ -63,7 +66,7 @@ const getTextFile = async ({
       `${localBaseUri}${relativeUri}${tempAddOn}`,
       options,
     );
-    if (status >= 400) throw new Error(`http status: ${status}`);
+    if (status >= 400) throw httpError(status, relativeUri);
     return await FileSystem.readAsStringAsync(
       `${localBaseUri}${relativeUri}${tempAddOn}`,
     );
@@ -244,7 +247,7 @@ export const fetchEpubAndAssets = async ({
               `${localBaseUri}${relativeUri}`,
               options,
             );
-            if (status >= 400) throw new Error(`http status: ${status}`);
+            if (status >= 400) throw httpError(status, relativeUri);
 
             if (await isCanceled()) return { success: false, errorMessage };
           } else {
@@ -336,7 +339,7 @@ export const fetchEpubAndAssets = async ({
 
       return { success: true, errorMessage };
     } catch (err) {
-      if (err.message === `http status: 403`) {
+      if (err.status === 403) {
         console.log(
           `Could not download epub from ${downloadBaseUrl} due to no auth.`,
         );
@@ -357,7 +360,13 @@ export const fetchEpubAndAssets = async ({
         //   }
       }
 
-      throw new Error('Invalid response to epub fetch.');
+      // Keep the real error, so Sentry shows what failed and where
+      throw Object.assign(
+        new Error(
+          `Invalid response to epub fetch (book ${bookId}${err.relativeUri ? `, ${err.relativeUri}` : ''}): ${err.message}`,
+        ),
+        { cause: err },
+      );
     }
   } catch (err) {
     if (await isCanceled()) return { success: false, errorMessage };
